@@ -23,16 +23,16 @@ export const getAgentById:GetAgentByIdType = async (id) => {
     }
     return new Promise((_, reject) => reject({ status:404, msg:"Agent not found"}))
 }
-export const updateAgent:UpdateAgentType = async (id, newData) => {
-    const index = agents.findIndex(t => t.id === id);
+export const updateAgent:UpdateAgentType = async (agent, newData) => {
+    const index = agents.findIndex(t => t.id === agent.id);
     if (index !== -1){
         agents[index] = { ...agents[index], ...newData}
         return new Promise((resolve)=>resolve(agents[index]));
     }
     return new Promise((_, reject) => reject({ status:404, msg:"Agent not found"}))
 }
-export const deleteAgent:DeleteAgentType = async (id) => {
-    const index = agents.findIndex(t => t.id === id);
+export const deleteAgent:DeleteAgentType = async (agent) => {
+    const index = agents.findIndex(t => t.id === agent.id);
     if (index !== -1){
         const [agent] = agents.splice(index, 1)
         return new Promise((resolve)=>resolve(agent));
@@ -43,5 +43,5 @@ export const deleteAgent:DeleteAgentType = async (id) => {
 type GetAgentsType = () => Promise<AgentType[]>
 type SaveNewAgentType = (newAgent:Omit<AgentType, "id">) => Promise<AgentType>
 type GetAgentByIdType = (id:AgentType["id"]) => Promise<AgentType>
-type UpdateAgentType = (id:AgentType["id"], newData:Partial<AgentType>) => Promise<AgentType>
-type DeleteAgentType = (id:AgentType["id"]) => Promise<AgentType>
+type UpdateAgentType = (id:AgentType, newData:Partial<AgentType>) => Promise<AgentType>
+type DeleteAgentType = (id:AgentType) => Promise<AgentType>
