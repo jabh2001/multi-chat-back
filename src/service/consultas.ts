@@ -1,6 +1,5 @@
-import connectToDatabase from "../libs/dataBase"
+import client from "../libs/dataBase"
 
 (async()=>{
-    const cliente = await connectToDatabase()
-    console.log(cliente)
+    console.log(client)
 })()
