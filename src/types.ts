@@ -19,7 +19,7 @@ export type AgentType = UserType
 
 export type SocialMediaType = {
     id:number
-    name:string
+    name:"facebook" | "gmail" | "instagram" | "whatsapp" | "telegram" | "linkedin" | "threads"
     url:string
     displayText:string
 }

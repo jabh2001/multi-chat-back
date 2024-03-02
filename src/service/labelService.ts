@@ -6,7 +6,7 @@ const labels:LabelType[] = [
     { id: 3, name: 'Investigación', description: 'Etiqueta para problemas que requieren investigación adicional.' }
 ]
 
-export const getTeams:GetLabelsType = async () => {
+export const getLabels:GetLabelsType = async () => {
     return new Promise((resolve) => resolve(labels));
 }
 

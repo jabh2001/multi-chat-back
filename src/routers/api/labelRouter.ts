@@ -1,10 +1,10 @@
 import { Router } from "express"
-import { deleteLabel, getLabelById, getTeams, saveNewLabel, updateLabel } from "../../service/labelService"
+import { deleteLabel, getLabelById, getLabels, saveNewLabel, updateLabel } from "../../service/labelService"
 const labelRouter = Router()
 
 labelRouter.route("/")
     .get(async(req, res) => {
-        const labels = await getTeams()
+        const labels = await getLabels()
         res.json({ labels })
     })
     .post(async (req, res) => {
