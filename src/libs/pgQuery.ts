@@ -203,7 +203,7 @@ export class Join{
     }
 
     build(){
-        return `${this.type} JOIN ${this.model.tableName} ON ${this.colA.q} = ${this.colB.q}`
+        return `${this.type} JOIN ${this.model.repository.tableName} ON ${this.colA.q} = ${this.colB.q}`
     }
 }
 export class Query {
@@ -253,7 +253,7 @@ export class Query {
         const [where, params] = this.where.getWhere()
         const join = this.joins.map(j => ` ${j.build()} `).join(" ")
 
-        let sql = `SELECT ${fields} FROM ${this.model.tableName} ${join} ${where}`
+        let sql = `SELECT ${fields} FROM ${this.model.repository.tableName} ${join} ${where}`
         return [sql, params]
     }
 
@@ -269,6 +269,7 @@ export class Query {
     async fetchOneQuery<T>():Promise<T>{
         const [sql, params] = this.getSQL()
         const result = await client.query(sql as any, params as any)
+        if(!result.rows.length) throw new Error('No ' + this.model.tableName + ' found!')
         return this.buildObjectFromRow(result.rows[0]) as any;
     
     }
@@ -322,7 +323,7 @@ class Insert extends Query{
     getSQL(): (string | any[])[] {
         const [placeholders, params] = this.placeholders
 
-        let sql = `INSERT INTO ${this.model.tableName} (${this.keys}) VALUES ${placeholders} RETURNING *;`
+        let sql = `INSERT INTO ${this.model.repository.tableName} (${this.keys}) VALUES ${placeholders} RETURNING *;`
         return [sql, params]
     }
 }
@@ -352,7 +353,7 @@ class Update extends Query {
         const [ statement, values ] = this.setStatement()
         const [where, params] = this.where.getWhere(values.length)
 
-        let sql = `UPDATE ${this.model.tableName} ${statement}  ${where} RETURNING *;`
+        let sql = `UPDATE ${this.model.repository.tableName} ${statement}  ${where} RETURNING *;`
         return [sql, [...values, ...params]]
     }
 }
@@ -361,7 +362,7 @@ class Delete extends Query {
     getSQL(): (string | any[])[] {
         const [where, params] = this.where.getWhere()
 
-        let sql = `DELETE FROM ${this.model.tableName} ${where} RETURNING *;`
+        let sql = `DELETE FROM ${this.model.repository.tableName} ${where} RETURNING *;`
         return [sql, params]
     }
 }

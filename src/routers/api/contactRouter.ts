@@ -8,8 +8,8 @@ const getModelMiddleware = async (req:Request, res:Response, next:NextFunction) 
 
         const contact = await getContactById(Number(req.params.id))
         req.contact = contact
-    } catch(e) {
-        return res.status(404).json({ error : 'Contact not found'})
+    } catch(e:any) {
+        return res.status(404).json({ error : e.message})
     }
     next()
 

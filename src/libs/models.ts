@@ -45,6 +45,11 @@ const UserModel = (
     .addColumn("email")
     .addColumn("role")
 )
+const UserTeamModel = (
+    new Model("user_team")
+    .addColumn("userId")
+    .addColumn("teamId")
+)
 
 const InboxModel = (
     new Model("inbox")
@@ -90,6 +95,7 @@ export {
     ContactLabelModel,
     SocialMediaModel,
     UserModel,
+    UserTeamModel,
     InboxModel,
     ConversationModel,
     MessageModel,
