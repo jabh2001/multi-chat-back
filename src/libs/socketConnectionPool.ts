@@ -49,10 +49,10 @@ class WhatsAppBaileysSocket extends Socket {
         sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
             qr && this.saveQRCode(qr)
             if (connection === "close") {
-                const shouldReconnect = new Boom(lastDisconnect?.error).output.statusCode
+                const reason = new Boom(lastDisconnect?.error).output.statusCode
+                const shouldReconnect = reason !== DisconnectReason.loggedOut
 
                 if (shouldReconnect) {
-                    await sock.logout();
                     await this.start()
                 }
             }
@@ -76,6 +76,8 @@ class WhatsAppBaileysSocket extends Socket {
         const mensaje = {
             text: message.content
         };
+        console.log(`${phone}@s.whatsapp.net`);
+        
         await this.sock.sendMessage(`${phone}@s.whatsapp.net`, mensaje);
     }
 

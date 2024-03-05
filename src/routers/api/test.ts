@@ -19,8 +19,8 @@ testRouter.route("/")
         try {
             const { number, message } = req.body;
             const test = SocketPool.getInstance();
-            const prueba_ = test.createBaileysConnection(nombre);
-            await prueba_.start();
+            const prueba_ = test.getBaileysConnection(nombre);
+            // await prueba_.start();
     
             const mensaje :MessageType= {
                 id: 1,
@@ -44,7 +44,7 @@ testRouter.route("/")
                 }
             };
     
-            await prueba_.sendMessage(number, mensaje);
+            await prueba_?.sendMessage(number, mensaje);
             res.json({ mensaje: "se envió el mensaje" });
         } catch (error) {
             console.error(error);
