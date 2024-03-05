@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response, Router } from "express"
-import { deleteContact, getContactById, getContactSocialMedia, getContacts, saveNewContact, saveNewContactSocialMedia, updateContact, updateContactLabel, updateSocialMedia } from "../../service/contactService"
+import { deleteContact, getContactById, getContactLabels, getContactSocialMedia, getContacts, saveNewContact, saveNewContactSocialMedia, updateContact, updateContactLabel, updateSocialMedia } from "../../service/contactService"
 import { SocialMediaModel } from "../../libs/models"
 const contactRouter = Router()
 
@@ -44,7 +44,7 @@ contactRouter.route("/:id")
 
 contactRouter.route("/:id/labels")
     .get(async (req, res) => {
-        res.json({ labels:[] })
+        res.json({ labels:await getContactLabels(req.contact) })
     })
     .put(async (req, res) => {
         const contact = await updateContactLabel(req.contact, req.body)

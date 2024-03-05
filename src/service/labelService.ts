@@ -1,27 +1,21 @@
 import { LabelType } from "../types";
 import { LabelModel } from "../libs/models";
 
-const labels:LabelType[] = [
-    { id: 1, name: 'Urgente', description: 'Etiqueta para problemas que requieren atención inmediata.' },
-    { id: 2, name: 'Prioridad Baja', description: 'Etiqueta para problemas con baja prioridad.' },
-    { id: 3, name: 'Investigación', description: 'Etiqueta para problemas que requieren investigación adicional.' }
-]
-
 export const getLabels:GetLabelsType = async () => {
-    return await LabelModel.repository.findAll()
+    return await LabelModel.query.fetchAllQuery<LabelType>()
 }
 
 export const saveNewLabel:SaveNewLabelType = async (newLabel) => {
-    return await LabelModel.repository.insert(newLabel)
+    return await LabelModel.insert.value(newLabel).fetchOneQuery<LabelType>()
 }
 export const getLabelById:GetLabelByIdType = async (id) => {
-    return await LabelModel.repository.findById(id)
+    return await LabelModel.query.filter(LabelModel.c.id.equalTo(id)).fetchOneQuery<LabelType>()
 }
 export const updateLabel:UpdateLabelType = async (id, newData) => {
-    return await LabelModel.repository.update(id, newData)
+    return await LabelModel.update.values(newData).filter(LabelModel.c.id.equalTo(id)).fetchOneQuery<LabelType>()
 }
 export const deleteLabel:DeleteLabelType = async (id) => {
-    return await LabelModel.repository.delete(id)
+    return await LabelModel.delete.filter(LabelModel.c.id.equalTo(id)).fetchOneQuery<LabelType>()
 }
 
 type GetLabelsType = () => Promise<LabelType[]>

@@ -1,10 +1,10 @@
 import { Router } from "express"
-import { deleteAgent, getAgentById, getTeams, saveNewAgent, updateAgent } from "../../service/agentService"
+import { deleteAgent, getAgentById, getAgents, saveNewAgent, updateAgent } from "../../service/agentService"
 const agentRouter = Router()
 
 agentRouter.route("/")
     .get(async(req, res) => {
-        const agents = await getTeams()
+        const agents = await getAgents()
         res.json({ agents })
     })
     .post(async (req, res) => {

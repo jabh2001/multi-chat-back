@@ -1,4 +1,4 @@
-import { ContactModel, SocialMediaModel } from "../libs/models";
+import { ContactLabelModel, ContactModel, LabelModel, SocialMediaModel } from "../libs/models";
 import { ContactType, LabelType, SocialMediaType } from "../types";
 import { getLabels } from "./labelService";
 
@@ -22,11 +22,15 @@ export const deleteContact:DeleteContactType = async (contact) => {
     return await ContactModel.delete.filter(ContactModel.c.id.equalTo(contact.id)).fetchOneQuery()
 }
 
+export const getContactLabels:getContactLabelsType = async (contact) => {
+    return await LabelModel.query.join(ContactLabelModel, ContactLabelModel.c.labelId).filter(ContactLabelModel.c.contactId.equalTo(contact.id)).fetchAllQuery<LabelType>()
+}
+
 export const updateContactLabel:UpdateContactLabelType = async (contact, labels) => {
-    return new Promise((resolve)=>resolve([]));
-    // const ls = await getLabels()
-    // contact.labels = ls.filter(l => labels.includes(l.id))
-    // return new Promise((resolve)=>resolve(contact.labels));
+    await ContactLabelModel.delete.filter(ContactLabelModel.c.contactId.equalTo(contact.id)).fetchOneQuery();
+    const values = labels.map(l => ({ contactId:contact.id, labelId:l }))
+    await ContactLabelModel.insert.values(...values).fetchOneQuery()
+    return await getContactLabels(contact);
 }
 
 export const getContactSocialMedia:getContactSocialMediaType = async (contact) => {
@@ -45,7 +49,8 @@ type SaveNewContactType = (newContact:Omit<ContactType, "id">) => Promise<Contac
 type GetContactByIdType = (id:ContactType["id"]) => Promise<ContactType>
 type UpdateContactType = (contact:ContactType, newData:Partial<ContactType>) => Promise<ContactType>
 type DeleteContactType = (contact:ContactType) => Promise<ContactType>
-type UpdateContactLabelType = (contact:ContactType, labels:number[]) => Promise<LabelType[]>
+type getContactLabelsType = (contact:ContactType) => Promise<LabelType[]>
+type UpdateContactLabelType = (contact:ContactType, labels:LabelType["id"][]) => Promise<LabelType[]>
 type getContactSocialMediaType = (contact:ContactType) => Promise<SocialMediaType[]>
 type saveNewContactSocialMediaType = (contact:ContactType, socialMedia:Omit<SocialMediaType, "id">) => Promise<SocialMediaType>
 type updateSocialMediaType = (socialMediaId:SocialMediaType["id"], socialMedia:Partial<SocialMediaType>) => Promise<SocialMediaType>

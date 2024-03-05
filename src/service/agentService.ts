@@ -7,7 +7,7 @@ const agents:AgentType[] = [
     { id: 4, name: "Jane Smith", role: "agent", email: "jane@example.com", teams:[] }
 ]
 
-export const getTeams:GetAgentsType = async () => {
+export const getAgents:GetAgentsType = async () => {
     return new Promise((resolve) => resolve(agents));
 }
 

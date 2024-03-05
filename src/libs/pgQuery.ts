@@ -280,30 +280,66 @@ export class Query {
 }
 
 class Insert extends Query{
+    protected obj:Array<{[key:string]:string | number}>
+
+    constructor(model:Model, obj:any=[]){
+        super(model)
+        this.obj = obj
+    }
+    value(values:any){
+        this.obj = [values]
+        return this
+    }
+
+    values(...values:any[]){
+        this.obj = [...this.obj, ...values]
+        return this
+    }
+    get placeholders(){
+        const params:any[] = []
+        const columnsName = Object.keys(this.obj[0])
+        const cols = Object.keys(this.model.c).filter(c => columnsName.includes(c))
+
+        const placeholders =  this.obj.map((insert) => {
+        
+            const insertStr = cols.map(c => {
+                if(Object.keys(insert).includes(c)){
+                    params.push(insert[c])
+                } else {
+                    params.push("null")
+                }
+                return `$${params.length}`
+            })
+            return `(${insertStr})`
+        }).join(', ');
+        return [placeholders, params]
+    }
+    get keys(){
+        const columnsName = Object.keys(this.obj[0])
+        const keys = Object.values(this.model.c).filter(o => columnsName.includes(o.name)).map(o => `"${o.name}"`);
+        return keys.join(', ')
+    }
+    getSQL(): (string | any[])[] {
+        const [placeholders, params] = this.placeholders
+
+        let sql = `INSERT INTO ${this.model.tableName} (${this.keys}) VALUES ${placeholders} RETURNING *;`
+        return [sql, params]
+    }
+}
+
+class Update extends Query {
     protected obj:{[key:string]:string | number}
 
     constructor(model:Model, obj:any={}){
         super(model)
         this.obj = obj
     }
+
     values(values:object){
         this.obj = {...this.obj, ...values}
         return this
     }
-    get keys(){
-        const keys = Object.keys(this.obj).map(o => `"${o}"`);
-        return keys.join(', ')
-    }
-    getSQL(): (string | any[])[] {
-        const params = Object.values(this.obj)
-        const placeholders = params.map((_, index) => `$${index + 1}`).join(', ');
 
-        let sql = `INSERT INTO ${this.model.tableName} (${this.keys}) VALUES (${placeholders}) RETURNING *;`
-        return [sql, params]
-    }
-}
-
-class Update extends Insert {
     get keys(){
         const setStatements = Object.keys(this.obj).map((key, index) => `"${key}" = $${index + 1}`).join(', ');
         return setStatements
