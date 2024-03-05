@@ -3,6 +3,7 @@ import teamRouter from "./teamRouter"
 import labelRouter from "./labelRouter"
 import agentRouter from "./agentRouter"
 import contactRouter from "./contactRouter"
+import testRouter from "./test"
 import { AgentType, ContactType } from "../../types"
 
 const apiRouter = Router()
@@ -18,6 +19,7 @@ apiRouter.use("/agents", agentRouter)
 
 apiRouter.use("/contact", contactRouter)
 apiRouter.use("/contacts", contactRouter)
+apiRouter.use("/test", testRouter)
 
 export default apiRouter
 
