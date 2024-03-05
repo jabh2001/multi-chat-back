@@ -1,4 +1,5 @@
 import { LabelType } from "../types";
+import { LabelModel } from "../libs/models";
 
 const labels:LabelType[] = [
     { id: 1, name: 'Urgente', description: 'Etiqueta para problemas que requieren atención inmediata.' },
@@ -7,36 +8,20 @@ const labels:LabelType[] = [
 ]
 
 export const getLabels:GetLabelsType = async () => {
-    return new Promise((resolve) => resolve(labels));
+    return await LabelModel.repository.findAll()
 }
 
 export const saveNewLabel:SaveNewLabelType = async (newLabel) => {
-    const labelWithId = { ...newLabel, id: Math.max(...labels.map(t=>t.id)) + 1 };
-    labels.push(labelWithId);
-    return new Promise((resolve) => resolve(labelWithId))
+    return await LabelModel.repository.insert(newLabel)
 }
 export const getLabelById:GetLabelByIdType = async (id) => {
-    const index = labels.findIndex(t => t.id === id);
-    if (index !== -1){
-        return new Promise((resolve)=>resolve(labels[index]));
-    }
-    return new Promise((_, reject) => reject({ status:404, msg:"Label not found"}))
+    return await LabelModel.repository.findById(id)
 }
 export const updateLabel:UpdateLabelType = async (id, newData) => {
-    const index = labels.findIndex(t => t.id === id);
-    if (index !== -1){
-        labels[index] = { ...labels[index], ...newData}
-        return new Promise((resolve)=>resolve(labels[index]));
-    }
-    return new Promise((_, reject) => reject({ status:404, msg:"Label not found"}))
+    return await LabelModel.repository.update(id, newData)
 }
 export const deleteLabel:DeleteLabelType = async (id) => {
-    const index = labels.findIndex(t => t.id === id);
-    if (index !== -1){
-        const [label] = labels.splice(index, 1)
-        return new Promise((resolve)=>resolve(label));
-    }
-    return new Promise((_, reject) => reject({ status:404, msg:"Team not found"}))
+    return await LabelModel.repository.delete(id)
 }
 
 type GetLabelsType = () => Promise<LabelType[]>

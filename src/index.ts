@@ -1,6 +1,7 @@
 import express from "express"
 import cors from "cors"
 import apiRouter from "./routers/api"
+import { TeamModel } from "./libs/models"
 
 const app = express()
 const port = 3000
@@ -12,7 +13,12 @@ app.use(cors({ origin:"http://localhost:5173", credentials:true}))
 app.use("/api", apiRouter)
 
 app.get("/", async (req, res)=>{
-    res.send("html")
+    const insert = TeamModel.insert.values({ name:"hola"}).getSQL()
+    const update = TeamModel.update.values({ name:"hola", description:"asd"}).filter(TeamModel.c.id.equalTo(1), TeamModel.c.name.lessThan(1)).getSQL()
+    res.json({
+        insert,
+        update
+    })
 })
 
 

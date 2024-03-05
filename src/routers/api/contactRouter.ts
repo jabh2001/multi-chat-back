@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response, Router } from "express"
-import { deleteContact, getContactById, getContacts, saveNewContact, saveNewContactSocialMedia, updateContact, updateContactLabel, updateSocialMedia } from "../../service/contactService"
+import { deleteContact, getContactById, getContactSocialMedia, getContacts, saveNewContact, saveNewContactSocialMedia, updateContact, updateContactLabel, updateSocialMedia } from "../../service/contactService"
+import { SocialMediaModel } from "../../libs/models"
 const contactRouter = Router()
 
 const getModelMiddleware = async (req:Request, res:Response, next:NextFunction) => {
@@ -41,9 +42,9 @@ contactRouter.route("/:id")
         res.json({ contact })
     })
 
-    contactRouter.route("/:id/labels")
+contactRouter.route("/:id/labels")
     .get(async (req, res) => {
-        res.json({ labels:req.contact.labels })
+        res.json({ labels:[] })
     })
     .put(async (req, res) => {
         const contact = await updateContactLabel(req.contact, req.body)
@@ -51,7 +52,7 @@ contactRouter.route("/:id")
     })
 contactRouter.route("/:id/social-media")
     .get(async (req, res) => {
-        res.json({ socialMedia:req.contact.socialMedia })
+        res.json({ socialMedia:await getContactSocialMedia(req.contact) })
     })
     .post(async (req, res) => {
         const socialMedia = await saveNewContactSocialMedia(req.contact, req.body)
@@ -60,20 +61,18 @@ contactRouter.route("/:id/social-media")
 
 contactRouter.route("/:id/social-media/:socialMediaId")
     .get(async (req, res) => {
-        const socialMedia = req.contact.socialMedia.find(s => s.id === Number(req.params.socialMediaId))
-        if (!socialMedia){
+        const socialMedia = await SocialMediaModel.query.filter(SocialMediaModel.c.id.equalTo(req.params.socialMediaId)).fetchOneQuery<any>()
+        if (!socialMedia || req.contact.id !== socialMedia.contactId){
             return res.status(404).json({error : 'Social Media not found'}).end()
         }
         res.json({ socialMedia })
     })
     .put(async (req, res) => {
-        const socialMedia = req.contact.socialMedia.find(s => s.id === Number(req.params.socialMediaId))
+        const socialMedia = await SocialMediaModel.repository.update(req.params.socialMediaId, req.body)
         if (!socialMedia){
             return res.status(404).json({error : 'Social Media not found'}).end()
         }
-
-        const newSocialMedia = await updateSocialMedia(socialMedia.id, req.body)
-        res.json({ socialMedia:newSocialMedia })
+        res.json({ socialMedia })
     })
 
 export default contactRouter
