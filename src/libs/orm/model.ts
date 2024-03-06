@@ -94,7 +94,11 @@ export class Model extends BaseModel {
         Model.modelPool.push(this)
         this.repository = new BaseRepository(tableName)
         this.tableName = tableName
-        this.c = Object.fromEntries(columns.map(c => ([c.name, c])))
+        this.c = Object.fromEntries(columns.map(c => {
+            c.model = this
+            return [c.name, c]
+        }))
+        
     }
 
     addColumn(column:Column){

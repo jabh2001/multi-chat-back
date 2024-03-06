@@ -1,47 +1,41 @@
-import { AgentType } from "../types";
-
-const agents:AgentType[] = [
-    { id: 1, name: "Jhonder Bastidas", role: "admin", email: "jhonder@example.com", teams:[] },
-    { id: 2, name: "Reina", role: "agent", email: "reina@example.com", teams:[] },
-    { id: 3, name: "John Doe", role: "agent", email: "john@example.com", teams:[] },
-    { id: 4, name: "Jane Smith", role: "agent", email: "jane@example.com", teams:[] }
-]
+import { TeamModel, UserModel, UserTeamModel } from "../libs/models";
+import { AgentType, TeamType, UserType } from "../types";
 
 export const getAgents:GetAgentsType = async () => {
-    return new Promise((resolve) => resolve(agents));
+    return await UserModel.query.fetchAllQuery()
 }
 
 export const saveNewAgent:SaveNewAgentType = async (newAgent) => {
-    const agentWithId = { ...newAgent, id: Math.max(...agents.map(t=>t.id)) + 1 };
-    agents.push(agentWithId);
-    return new Promise((resolve) => resolve(agentWithId))
+    return await UserModel.insert.value(newAgent).fetchOneQuery()
 }
 export const getAgentById:GetAgentByIdType = async (id) => {
-    const index = agents.findIndex(t => t.id === id);
-    if (index !== -1){
-        return new Promise((resolve)=>resolve(agents[index]));
-    }
-    return new Promise((_, reject) => reject({ status:404, msg:"Agent not found"}))
+    return await UserModel.query.filter(UserModel.c.id.equalTo(id)).fetchOneQuery()
 }
+
 export const updateAgent:UpdateAgentType = async (agent, newData) => {
-    const index = agents.findIndex(t => t.id === agent.id);
-    if (index !== -1){
-        agents[index] = { ...agents[index], ...newData}
-        return new Promise((resolve)=>resolve(agents[index]));
-    }
-    return new Promise((_, reject) => reject({ status:404, msg:"Agent not found"}))
+    return await UserModel.update.values(newData).filter(UserModel.c.id.equalTo(agent.id)).fetchOneQuery()
 }
+
 export const deleteAgent:DeleteAgentType = async (agent) => {
-    const index = agents.findIndex(t => t.id === agent.id);
-    if (index !== -1){
-        const [agent] = agents.splice(index, 1)
-        return new Promise((resolve)=>resolve(agent));
-    }
-    return new Promise((_, reject) => reject({ status:404, msg:"Team not found"}))
+    return await UserModel.delete.filter(UserModel.c.id.equalTo(agent.id)).fetchOneQuery()
 }
+
+export const getAgentTeams:getAgentTeamsType = async (agent) => {
+    return await TeamModel.query.join(UserTeamModel, UserTeamModel.c.teamId).filter(UserTeamModel.c.userId.equalTo(agent.id)).fetchAllQuery()
+}
+
+export const updateAgentTeams:UpdateAgentTeamsType = async (agent, teams)=>{
+    await UserTeamModel.delete.filter(UserTeamModel.c.userId.equalTo(agent.id)).fetchAllQuery()
+    const values = teams.map(t => ({ userId:agent.id, teamId:t }))
+    await UserTeamModel.insert.values(...values).fetchAllQuery()
+    return await getAgentTeams(agent)
+}
+
 
 type GetAgentsType = () => Promise<AgentType[]>
 type SaveNewAgentType = (newAgent:Omit<AgentType, "id">) => Promise<AgentType>
 type GetAgentByIdType = (id:AgentType["id"]) => Promise<AgentType>
 type UpdateAgentType = (id:AgentType, newData:Partial<AgentType>) => Promise<AgentType>
 type DeleteAgentType = (id:AgentType) => Promise<AgentType>
+type getAgentTeamsType = (agent:UserType) => Promise<TeamType[]>
+type UpdateAgentTeamsType = (agent:UserType, teams:TeamType["id"][]) => Promise<TeamType[]>

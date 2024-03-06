@@ -106,8 +106,8 @@ client.connect()
         "teamId" INT REFERENCES team(id)
       );
       `
-
-      await client.query(Model.modelPool.map(m => m.buildSQL()).join(""));
+      const query = Model.modelPool.map(m => m.buildSQL()).join("")
+      await client.query(query);
     } catch (error) {
       console.error('Error al crear tablas:', error);
     } finally {

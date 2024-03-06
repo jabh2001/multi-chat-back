@@ -66,7 +66,7 @@ const InboxModel = (
     new Model("inbox", [
         new SerialColumn("id", true),
         new StringColumn("name", 50, { nullable:false, unique:true }),
-        new StringColumn("channelType"),
+        new StringColumn("channelType", 50),
     ])
 )
 
@@ -85,6 +85,8 @@ const ConversationModel = (
 const MessageModel = (
     new Model("message", [
         new SerialColumn("id", true),
+        new IntColumn("conversationId", 0, { foreign:ConversationModel.c.id, nullable:false }),
+        new IntColumn("senderId", 0, { foreign:UserModel.c.id, nullable:true }),
         new StringColumn("content"),
         new StringColumn("contentType", 50),
         new StringColumn("messageType", 50),
@@ -102,6 +104,7 @@ export {
     ContactLabelModel,
     SocialMediaModel,
     UserModel,
+    UserTeamModel,
     InboxModel,
     ConversationModel,
     MessageModel,

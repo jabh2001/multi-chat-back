@@ -86,6 +86,9 @@ export class Query {
     async fetchOneQuery<T>():Promise<T>{
         const [sql, params] = this.getSQL()
         const result = await client.query(sql as any, params as any)
+        if(result.rows.length == 0){
+            throw new Error(`Source not found`)
+        }
         return this.buildObjectFromRow(result.rows[0]) as any;
     
     }
@@ -142,6 +145,10 @@ export class Insert extends Query{
         let sql = `INSERT INTO ${this.model.tableName} (${this.keys}) VALUES ${placeholders} RETURNING *;`
         return [sql, params]
     }
+
+    buildObjectFromRow(row:any){
+        return row
+    }
 }
 
 export class Update extends Query {
@@ -172,6 +179,10 @@ export class Update extends Query {
         let sql = `UPDATE ${this.model.tableName} ${statement}  ${where} RETURNING *;`
         return [sql, [...values, ...params]]
     }
+
+    buildObjectFromRow(row:any){
+        return row
+    }
 }
 
 export class Delete extends Query {
@@ -192,6 +203,9 @@ export class Where{
         return [`WHERE ${condition}`, this.conditionList.map(c => c.value)]
     }
 
+    buildObjectFromRow(row:any){
+        return row
+    }
 }
 export class Condition {
     private field:Column

@@ -6,6 +6,7 @@ type ColumnOption = {
     primaryKey:boolean
     unique:boolean
     foreign:Column | false
+    default:any | false
 }
 type PartialOption = Partial<ColumnOption>
 
@@ -19,6 +20,7 @@ export class Column {
             primaryKey:false,
             unique:false,
             foreign:false,
+            default:false,
             ...option
         }
     }
@@ -63,23 +65,24 @@ export class Column {
 
     getBuildSQL(){
         const length = this.length == 0 ? "" : `(${this.length})`
-        const nullable = this.options.nullable ? "NULL" : "NOT NULL"
+        const nullable = this.options.nullable ? "" : "NOT NULL"
         const primaryKey = this.options.primaryKey ? "PRIMARY KEY" : ""
         const unique = this.options.unique ? "UNIQUE" : ""
-        const foreign = this.options.foreign && this.options.foreign.model ? `REFERENCES "${this.options.foreign.model}"("${this.options.foreign.name}")` : ""
-        return `"${this.name}" ${this.type}${length} ${nullable} ${primaryKey} ${unique} ${foreign}`
+        const foreign = this.options.foreign && this.options.foreign.model ? `REFERENCES "${this.options.foreign.model.tableName}"("${this.options.foreign.name}")` : ""
+        const defaultC = this.options.default ? `DEFAULT ${this.options.default}` : ""
+        return `"${this.name}" ${this.type}${length} ${nullable} ${primaryKey} ${unique} ${foreign} ${defaultC}`
     }
 }
 
 export class SerialColumn extends Column {
     constructor (name : string, primary:boolean=false ) { 
-        super(name, 'int', 0, { primaryKey:primary })
+        super(name, 'SERIAL', 0, { primaryKey:primary })
     }
 }
 
 export class IntColumn extends Column {
     constructor (name : string, length:number=0, option?:PartialOption ) { 
-        super(name, 'int', length, option)
+        super(name, 'INT', length, option)
     }
 }
 
@@ -97,6 +100,6 @@ export class BooleanColumn extends Column {
 
 export class TimeStampColumn extends Column {
     constructor (name : string ) { 
-        super(name, 'int', 0)
+        super(name, 'TIMESTAMP', 0, { nullable:false, default:`current_timestamp` })
     }
 }
