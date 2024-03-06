@@ -1,91 +1,100 @@
-import { Column, Model } from "./pgQuery"
+import { Column, Model } from "./orm"
+import { BooleanColumn, IntColumn, SerialColumn, StringColumn, TimeStampColumn } from "./orm/column"
 
-const TeamModel = (
-    new Model("team")
-    .addColumn(Column.primary("id"))
-    .addColumn("name")
-    .addColumn("description")
+
+const UserModel = (
+    new Model("user",[
+        new SerialColumn("id", true),
+        new StringColumn("name", 50, { nullable:false }),
+        new StringColumn("email", 100, { nullable:false }),
+        new StringColumn("password", 0, { nullable:false }),
+        new StringColumn("role", 8, { nullable:false }),
+    ])
 )
 
 const LabelModel = (
-    new Model("label")
-    .addColumn(Column.primary("id"))
-    .addColumn("name")
-    .addColumn("description")
+    new Model("label", [
+        new SerialColumn("id", true),
+        new StringColumn("name", 50),
+        new StringColumn("description"),
+    ])
 )
+
+const TeamModel = (
+    new Model("team", [
+        new SerialColumn("id", true),
+        new StringColumn("name", 50),
+        new StringColumn("description"),
+    ])
+)
+
 const ContactModel = (
-    new Model("contact")
-    .addColumn(Column.primary("id"))
-    .addColumn("name")
-    .addColumn("email")
-    .addColumn("phoneNumber")
-    .addColumn("avatarUrl")
+    new Model("contact", [
+        new SerialColumn("id", true),
+        new StringColumn("name", 50, { nullable:false }),
+        new StringColumn("email", 100, { nullable:false }),
+        new StringColumn("phoneNumber", 15),
+        new StringColumn("avatarUrl", 255),
+    ])
 )
 
 type SocialNetwork = "facebook" | "gmail" | "instagram" | "whatsapp" | "telegram" | "linkedin" | "threads"
 
 const SocialMediaModel = (
-    new Model("social_media")
-    .addColumn(Column.primary("id"))
-    .addColumn("contactId")
-    .addColumn("name")
-    .addColumn("url")
-    .addColumn("displayText")
+    new Model("social_media", [
+        new SerialColumn("id", true),
+        new IntColumn("contactId", 0, { nullable:false, foreign:ContactModel.c.id }),
+        new StringColumn("name", 100, { nullable:false }),
+        new StringColumn("url"),
+        new StringColumn("displayText", 50),
+    ])
 )
 const ContactLabelModel = (
-    new Model("contact_label")
-    .addColumn("contactId")
-    .addColumn("labelId")
-)
-
-const UserModel = (
-    new Model("user")
-    .addColumn(Column.primary("id"))
-    .addColumn("name")
-    .addColumn("email")
-    .addColumn("role")
+    new Model("contact_label", [
+        new IntColumn("contactId", 0, { foreign:ContactModel.c.id }),
+        new IntColumn("labelId", 0, { foreign:LabelModel.c.id }),
+    ])
 )
 const UserTeamModel = (
-    new Model("user_team")
-    .addColumn("userId")
-    .addColumn("teamId")
+    new Model("contact_label", [
+        new IntColumn("userId", 0, { foreign:UserModel.c.id }),
+        new IntColumn("teamId", 0, { foreign:TeamModel.c.id }),
+    ])
 )
 
 const InboxModel = (
-    new Model("inbox")
-    .addColumn(Column.primary("id"))
-    .addColumn("name")
-    .addColumn("channelType")
+    new Model("inbox", [
+        new SerialColumn("id", true),
+        new StringColumn("name", 50, { nullable:false, unique:true }),
+        new StringColumn("channelType", 50),
+    ])
 )
 
 const ConversationModel = (
-    new Model("conversation")
-    .addColumn(Column.primary("id"))
-    .addColumn("accountId")
-    .addColumn("inboxId")
-    .addColumn("senderId")
-    .addColumn("userId")
+    new Model("conversation", [
+        new SerialColumn("id", true),
+        new IntColumn("inboxId", 0, { foreign:InboxModel.c.id, nullable:false }),
+        new IntColumn("senderId", 0, { foreign:ContactModel.c.id, nullable:false }),
+        new IntColumn("assignedUserId", 0, { foreign:UserModel.c.id, nullable:true }),
+        new IntColumn("assignedTeamId", 0, { foreign:TeamModel.c.id, nullable:true }),
+        new TimeStampColumn("createdAt")
+    ])
 )
 
 
 const MessageModel = (
-    new Model("message")
-    .addColumn(Column.primary("id"))
-    .addColumn("conversationId")
-    .addColumn("content")
-    .addColumn("contentType")
-    .addColumn("messageType")
-    .addColumn("private")
-    .addColumn("createdAt")
+    new Model("message", [
+        new SerialColumn("id", true),
+        new IntColumn("conversationId", 0, { foreign:ConversationModel.c.id, nullable:false }),
+        new IntColumn("senderId", 0, { foreign:UserModel.c.id, nullable:true }),
+        new StringColumn("content"),
+        new StringColumn("contentType", 50),
+        new StringColumn("messageType", 50),
+        new BooleanColumn("private"),
+        new TimeStampColumn("createdAt"),
+    ])
 )
 
-
-// async function main(){
-//     const result = await ContactModel.query.join(SocialMediaModel, SocialMediaModel.c.contactId).fetchAllQuery()
-//     console.log(result)
-
-// }
-// main()
 export {
     Column,
     Model,
