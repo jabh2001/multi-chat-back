@@ -1,7 +1,9 @@
 import express,{Router} from "express"
 import expressWs from 'express-ws'
 import cors from "cors"
+import fs from 'fs'
 import apiRouter from "./routers/api"
+import path from "path"
 
 
 const app = express()
@@ -15,9 +17,31 @@ app.use("/api", apiRouter)
 
 const { getWss, applyTo } = expressWs(app);
 const qrRouter = Router()
+function enviarListaImagenes(ws:any) {
+    const rutaQrs = './qrs';
+    const archivos = fs.readdirSync(rutaQrs);
+    const imagenesBase64:object[] = [];
+
+    archivos.forEach((qr) => {
+        const rutaQr = path.join(rutaQrs, qr);
+        const contenido = fs.readFileSync(rutaQr, { encoding: 'base64' });
+
+        imagenesBase64.push({
+            nombre: qr,
+            contenido: contenido,
+        });
+    });
+
+    ws.send(JSON.stringify(imagenesBase64));
+}
 
 qrRouter.ws('/qr',(ws,rq)=>{
-    console.log('se creo el socket')
+    enviarListaImagenes(ws);
+
+    ws.on('open', () => {
+        console.log('conectado con exito')
+        ws.send('oli'); // Puedes enviar mensajes adicionales al abrir la conexión si es necesario
+    });
 })
 
 
