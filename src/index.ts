@@ -3,12 +3,8 @@ import expressWs from 'express-ws'
 import cors from "cors"
 import fs from 'fs'
 import apiRouter from "./routers/api"
-<<<<<<< HEAD
 import path from "path"
 
-=======
-import { TeamModel } from "./libs/models"
->>>>>>> database
 
 const app = express()
 const port = 3000
@@ -19,7 +15,6 @@ app.use(cors({ origin:"http://localhost:5173", credentials:true}))
 
 app.use("/api", apiRouter)
 
-<<<<<<< HEAD
 const { getWss, applyTo } = expressWs(app);
 const qrRouter = Router()
 function enviarListaImagenes(ws:any) {
@@ -47,15 +42,6 @@ qrRouter.ws('/qr',(ws,rq)=>{
         console.log('conectado con exito')
         ws.send('oli'); // Puedes enviar mensajes adicionales al abrir la conexión si es necesario
     });
-=======
-app.get("/", async (req, res)=>{
-    const insert = TeamModel.insert.values({ name:"hola"}, { name:"Hello"}).getSQL()
-    const update = TeamModel.update.values({ name:"hola", description:"asd"}).filter(TeamModel.c.id.equalTo(1), TeamModel.c.name.lessThan(1)).getSQL()
-    res.json({
-        insert,
-        update
-    })
->>>>>>> database
 })
 
 
