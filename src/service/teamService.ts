@@ -1,42 +1,24 @@
+import { TeamModel } from "../libs/models";
 import { TeamType } from "../types";
 
-const teams:TeamType[] = [
-    { id: 1, name: 'Desarrollo', description: 'Equipo encargado del desarrollo de software.' },
-    { id: 2, name: 'Marketing', description: 'Equipo encargado de las estrategias de marketing y publicidad.' },
-    { id: 3, name: 'Soporte Técnico', description: 'Equipo de atención al cliente y soporte técnico.' }
-]
-
 export const getTeams:GetTeamsType = async () => {
-    return new Promise((resolve) => resolve(teams));
+    const teams = await TeamModel.query.fetchAllQuery<TeamType>()
+    return teams;
 }
 
 export const saveNewTeam:SaveNewTeamType = async (newTeam) => {
-    const teamWithId = { ...newTeam, id: Math.max(...teams.map(t=>t.id)) + 1 };
-    teams.push(teamWithId);
-    return new Promise((resolve) => resolve(teamWithId))
+    const team = await TeamModel.insert.values({ ...newTeam }).fetchOneQuery<TeamType>()
+    return team
 }
 export const getTeamById:GetTeamByIdType = async (id) => {
-    const index = teams.findIndex(t => t.id === id);
-    if (index !== -1){
-        return new Promise((resolve)=>resolve(teams[index]));
-    }
-    return new Promise((_, reject) => reject({ status:404, msg:"Team not found"}))
+    return await TeamModel.query.filter(TeamModel.c.id.equalTo(id)).fetchOneQuery<TeamType>()
 }
 export const updateTeam:UpdateTeamType = async (id, newData) => {
-    const index = teams.findIndex(t => t.id === id);
-    if (index !== -1){
-        teams[index] = { ...teams[index], ...newData}
-        return new Promise((resolve)=>resolve(teams[index]));
-    }
-    return new Promise((_, reject) => reject({ status:404, msg:"Team not found"}))
+    return await TeamModel.update.values(newData).filter(TeamModel.c.id.equalTo(id)).fetchOneQuery<TeamType>()
 }
+
 export const deleteTeam:DeleteTeamType = async (id) => {
-    const index = teams.findIndex(t => t.id === id);
-    if (index !== -1){
-        const [team] = teams.splice(index, 1)
-        return new Promise((resolve)=>resolve(team));
-    }
-    return new Promise((_, reject) => reject({ status:404, msg:"Team not found"}))
+    return await TeamModel.delete.filter(TeamModel.c.id.equalTo(id)).fetchOneQuery<TeamType>()
 }
 
 type GetTeamsType = () => Promise<TeamType[]>

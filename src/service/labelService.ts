@@ -1,42 +1,21 @@
 import { LabelType } from "../types";
+import { LabelModel } from "../libs/models";
 
-const labels:LabelType[] = [
-    { id: 1, name: 'Urgente', description: 'Etiqueta para problemas que requieren atención inmediata.' },
-    { id: 2, name: 'Prioridad Baja', description: 'Etiqueta para problemas con baja prioridad.' },
-    { id: 3, name: 'Investigación', description: 'Etiqueta para problemas que requieren investigación adicional.' }
-]
-
-export const getTeams:GetLabelsType = async () => {
-    return new Promise((resolve) => resolve(labels));
+export const getLabels:GetLabelsType = async () => {
+    return await LabelModel.query.fetchAllQuery<LabelType>()
 }
 
 export const saveNewLabel:SaveNewLabelType = async (newLabel) => {
-    const labelWithId = { ...newLabel, id: Math.max(...labels.map(t=>t.id)) + 1 };
-    labels.push(labelWithId);
-    return new Promise((resolve) => resolve(labelWithId))
+    return await LabelModel.insert.value(newLabel).fetchOneQuery<LabelType>()
 }
 export const getLabelById:GetLabelByIdType = async (id) => {
-    const index = labels.findIndex(t => t.id === id);
-    if (index !== -1){
-        return new Promise((resolve)=>resolve(labels[index]));
-    }
-    return new Promise((_, reject) => reject({ status:404, msg:"Label not found"}))
+    return await LabelModel.query.filter(LabelModel.c.id.equalTo(id)).fetchOneQuery<LabelType>()
 }
 export const updateLabel:UpdateLabelType = async (id, newData) => {
-    const index = labels.findIndex(t => t.id === id);
-    if (index !== -1){
-        labels[index] = { ...labels[index], ...newData}
-        return new Promise((resolve)=>resolve(labels[index]));
-    }
-    return new Promise((_, reject) => reject({ status:404, msg:"Label not found"}))
+    return await LabelModel.update.values(newData).filter(LabelModel.c.id.equalTo(id)).fetchOneQuery<LabelType>()
 }
 export const deleteLabel:DeleteLabelType = async (id) => {
-    const index = labels.findIndex(t => t.id === id);
-    if (index !== -1){
-        const [label] = labels.splice(index, 1)
-        return new Promise((resolve)=>resolve(label));
-    }
-    return new Promise((_, reject) => reject({ status:404, msg:"Team not found"}))
+    return await LabelModel.delete.filter(LabelModel.c.id.equalTo(id)).fetchOneQuery<LabelType>()
 }
 
 type GetLabelsType = () => Promise<LabelType[]>

@@ -1,74 +1,56 @@
-import { ContactType } from "../types";
-
-const contacts:ContactType[] = [
-    { 
-        id: 1, 
-        name: 'John Doe', 
-        email: 'john@example.com', 
-        phoneNumber: '+1234567890', 
-        avatarUrl: 'https://i.pravatar.cc/150?u=John+Doe', 
-        labels:[
-            { id: 1, name: 'Urgente', description: 'Etiqueta para problemas que requieren atención inmediata.' },
-            { id: 2, name: 'Prioridad Baja', description: 'Etiqueta para problemas con baja prioridad.' },
-        ],
-        socialMedia: [
-            { id: 1, name: 'Twitter', url: 'https://twitter.com/johndoe', displayText: '@johndoe' },
-            { id: 2, name: 'LinkedIn', url: 'https://www.linkedin.com/in/johndoe', displayText: 'John Doe' }
-        ]
-    },
-    { 
-        id: 2, 
-        name: 'Jane Smith', 
-        email: 'jane@example.com', 
-        phoneNumber: '+1987654321', 
-        avatarUrl: 'https://i.pravatar.cc/150?u=Jane+Smith', 
-        labels:[
-            { id: 2, name: 'Prioridad Baja', description: 'Etiqueta para problemas con baja prioridad.' },
-        ],
-        socialMedia: [
-            { id: 1, name: 'Twitter', url: 'https://twitter.com/janesmith', displayText: '@janesmith' }
-        ]
-    }
-]
+import { ContactLabelModel, ContactModel, LabelModel, SocialMediaModel } from "../libs/models";
+import { ContactType, LabelType, SocialMediaType } from "../types";
+import { getLabels } from "./labelService";
 
 export const getContacts:GetContactsType = async (labelId=undefined) => {
-    return new Promise((resolve) =>{
-        const copy = contacts.filter(el => labelId ? el.labels.map(l => l.id).includes(labelId) : el )
-        resolve(copy.map(c => ({...c, labels:[], socialMedia:[]})))
-    });
+    const contacts = await ContactModel.query.fetchAllQuery<ContactType>()
+    return contacts
 }
 
 export const saveNewContact:SaveNewContactType = async (newContact) => {
-    const contactWithId = { ...newContact, id: Math.max(...contacts.map(t=>t.id)) + 1 };
-    contacts.push(contactWithId);
-    return new Promise((resolve) => resolve(contactWithId))
+    return await ContactModel.insert.values(newContact).fetchOneQuery<ContactType>()
 }
+
 export const getContactById:GetContactByIdType = async (id) => {
-    const index = contacts.findIndex(t => t.id === id);
-    if (index !== -1){
-        return new Promise((resolve)=>resolve(contacts[index]));
-    }
-    return new Promise((_, reject) => reject({ status:404, msg:"Contact not found"}))
+    return await ContactModel.query.filter(ContactModel.c.id.equalTo(id)).fetchOneQuery<ContactType>()
 }
+
 export const updateContact:UpdateContactType = async (contact, newData) => {
-    const index = contacts.findIndex(t => t.id === contact.id);
-    if (index !== -1){
-        contacts[index] = { ...contacts[index], ...newData}
-        return new Promise((resolve)=>resolve(contacts[index]));
-    }
-    return new Promise((_, reject) => reject({ status:404, msg:"Contact not found"}))
+    return await ContactModel.update.values(newData).filter(ContactModel.c.id.equalTo(contact.id)).fetchOneQuery()
 }
 export const deleteContact:DeleteContactType = async (contact) => {
-    const index = contacts.findIndex(t => t.id === contact.id);
-    if (index !== -1){
-        const [contact] = contacts.splice(index, 1)
-        return new Promise((resolve)=>resolve(contact));
-    }
-    return new Promise((_, reject) => reject({ status:404, msg:"Team not found"}))
+    return await ContactModel.delete.filter(ContactModel.c.id.equalTo(contact.id)).fetchOneQuery()
+}
+
+export const getContactLabels:getContactLabelsType = async (contact) => {
+    return await LabelModel.query.join(ContactLabelModel, ContactLabelModel.c.labelId).filter(ContactLabelModel.c.contactId.equalTo(contact.id)).fetchAllQuery<LabelType>()
+}
+
+export const updateContactLabel:UpdateContactLabelType = async (contact, labels) => {
+    await ContactLabelModel.delete.filter(ContactLabelModel.c.contactId.equalTo(contact.id)).fetchOneQuery();
+    const values = labels.map(l => ({ contactId:contact.id, labelId:l }))
+    await ContactLabelModel.insert.values(...values).fetchOneQuery()
+    return await getContactLabels(contact);
+}
+
+export const getContactSocialMedia:getContactSocialMediaType = async (contact) => {
+    return await SocialMediaModel.query.filter(SocialMediaModel.c.contactId.equalTo(contact.id)).fetchAllQuery()
+}
+export const saveNewContactSocialMedia:saveNewContactSocialMediaType = async (contact, newSocialMedia) => {
+    return await SocialMediaModel.insert.values({ ...newSocialMedia, contactId:contact.id }).fetchOneQuery()
+}
+
+export const updateSocialMedia:updateSocialMediaType = async (socialMediaId, newData) => {
+    return await SocialMediaModel.update.values(newData).filter(SocialMediaModel.c.id.equalTo(socialMediaId)).fetchOneQuery()
 }
 
 type GetContactsType = (label?:undefined | number) => Promise<ContactType[]>
 type SaveNewContactType = (newContact:Omit<ContactType, "id">) => Promise<ContactType>
 type GetContactByIdType = (id:ContactType["id"]) => Promise<ContactType>
-type UpdateContactType = (id:ContactType, newData:Partial<ContactType>) => Promise<ContactType>
-type DeleteContactType = (id:ContactType) => Promise<ContactType>
+type UpdateContactType = (contact:ContactType, newData:Partial<ContactType>) => Promise<ContactType>
+type DeleteContactType = (contact:ContactType) => Promise<ContactType>
+type getContactLabelsType = (contact:ContactType) => Promise<LabelType[]>
+type UpdateContactLabelType = (contact:ContactType, labels:LabelType["id"][]) => Promise<LabelType[]>
+type getContactSocialMediaType = (contact:ContactType) => Promise<SocialMediaType[]>
+type saveNewContactSocialMediaType = (contact:ContactType, socialMedia:Omit<SocialMediaType, "id">) => Promise<SocialMediaType>
+type updateSocialMediaType = (socialMediaId:SocialMediaType["id"], socialMedia:Partial<SocialMediaType>) => Promise<SocialMediaType>

@@ -1,7 +1,8 @@
 import { Client } from 'pg';
-import * as dotenv from 'dotenv';
-dotenv.config();
-import '../../.env';
+import { Model } from './orm';
+// import * as dotenv from 'dotenv';
+// dotenv.config();
+// import '../../.env';
 
 // Configuración de la conexión a la base de datos
 // const dbConfig = {
@@ -34,47 +35,12 @@ client.connect()
   .then(async () => {
     try {
       // Ejecutar la consulta de creación de tabla
-      const createTableQuery =`CREATE TABLE IF NOT EXISTS usuarios (
+      const createTableQuery =`
+      CREATE TABLE IF NOT EXISTS "user" (
         id SERIAL PRIMARY KEY,
-        nombre VARCHAR(50) NOT NULL,
-        email VARCHAR(100) NOT NULL
-      );
-      
-      CREATE TABLE IF NOT EXISTS message (
-        id SERIAL PRIMARY KEY,
-        conversation_id INT REFERENCES conversation(id),
-        content TEXT,
-        content_type VARCHAR(50),
-        message_type VARCHAR(50),
-        private BOOLEAN,
-        created_at TIMESTAMP
-      );
-      
-      CREATE TABLE IF NOT EXISTS conversation (
-        id SERIAL PRIMARY KEY,
-        account_id INT REFERENCES usuarios(id),
-        inbox_id INT REFERENCES inbox(id),
-        sender_id INT REFERENCES contact(id),
-        user_id INT REFERENCES usuarios(id)
-      );
-      
-      CREATE TABLE IF NOT EXISTS inbox (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(50),
-        channel_type VARCHAR(50)
-      );
-      CREATE TABLE IF NOT EXISTS team (
-        id INT PRIMARY KEY,  
-        name varchar (50),
-       description text   
-       );
-      
-      CREATE TABLE IF NOT EXISTS contact (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(50),
-        email VARCHAR(100),
-        phone_number VARCHAR(15),
-        avatar_url VARCHAR(255)
+        name VARCHAR(50) NOT NULL,
+        email VARCHAR(100) NOT NULL,
+        role VARCHAR(8) NOT NULL
       );
       
       CREATE TABLE IF NOT EXISTS label (
@@ -83,23 +49,70 @@ client.connect()
         description TEXT
       );
       
+      CREATE TABLE IF NOT EXISTS team (
+        id SERIAL PRIMARY KEY,  
+        name varchar (50),
+       description text   
+       );
+       
+       CREATE TABLE IF NOT EXISTS contact (
+         id SERIAL PRIMARY KEY,
+         name VARCHAR(50),
+         email VARCHAR(100),
+         "phoneNumber" VARCHAR(15),
+         "avatarUrl" VARCHAR(255)
+       );
+      
+      CREATE TABLE IF NOT EXISTS inbox (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(50),
+        "channelType" VARCHAR(50)
+      );
+      
+      CREATE TABLE IF NOT EXISTS conversation (
+        id SERIAL PRIMARY KEY,
+        "accountId" INT REFERENCES "user"(id),
+        "inboxId" INT REFERENCES inbox(id),
+        "senderId" INT REFERENCES contact(id),
+        "userId" INT REFERENCES "user"(id)
+      );
+      
+      CREATE TABLE IF NOT EXISTS message (
+        id SERIAL PRIMARY KEY,
+        "conversationId" INT REFERENCES conversation(id),
+        content TEXT,
+        "contentType" VARCHAR(50),
+        "messageType" VARCHAR(50),
+        private BOOLEAN,
+        "createdAt" TIMESTAMP
+      );
+
+      -- CREATE TYPE social_network AS ENUM ('facebook' , 'gmail' , 'instagram' , 'whatsapp' , 'telegram' , 'linkedin' , 'threads');
+
+      CREATE TABLE IF NOT EXISTS social_media (
+        id SERIAL PRIMARY KEY,
+        "contactId" int REFERENCES contact(id),
+        name social_network,
+        url TEXT,
+        "displayText" VARCHAR(50)
+      );
       CREATE TABLE IF NOT EXISTS contact_label (
-        contact_id INT REFERENCES contact(id),
-        label_id INT REFERENCES label(id)
+        "contactId" INT REFERENCES contact(id),
+        "labelId" INT REFERENCES label(id)
       );
       
       CREATE TABLE IF NOT EXISTS user_team (
-        user_id INT REFERENCES usuarios(id),
-        team_id INT REFERENCES team(id)
-      );`
+        "userId" INT REFERENCES "user"(id),
+        "teamId" INT REFERENCES team(id)
+      );
+      `
 
-      await client.query(createTableQuery);
-      console.log('Tablas creadas exitosamente');
+      await client.query(Model.modelPool.map(m => m.buildSQL()).join(""));
     } catch (error) {
       console.error('Error al crear tablas:', error);
     } finally {
       // Ensure to close the database connection
-      client.end();
+      // client.end();
     }
   })
   .catch((error) => {
