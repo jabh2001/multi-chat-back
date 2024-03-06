@@ -1,4 +1,5 @@
 import { Client } from 'pg';
+import { Model } from './orm';
 // import * as dotenv from 'dotenv';
 // dotenv.config();
 // import '../../.env';
@@ -106,8 +107,7 @@ client.connect()
       );
       `
 
-      await client.query(createTableQuery);
-      console.log('Tablas creadas exitosamente');
+      await client.query(Model.modelPool.map(m => m.buildSQL()).join(""));
     } catch (error) {
       console.error('Error al crear tablas:', error);
     } finally {
