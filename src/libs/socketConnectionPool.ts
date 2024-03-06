@@ -45,7 +45,7 @@ class WhatsAppBaileysSocket extends Socket {
     }
     async start() {
         const { state, saveCreds } = await useMultiFileAuthState(`sessions/${this.folder}`)
-        const sock = makeWASocket({ auth: state, logger: pino({ level: "silent" }) })
+        const sock = makeWASocket({ auth: state,})
         sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
             qr && this.saveQRCode(qr)
             if (connection === "close") {
@@ -76,9 +76,10 @@ class WhatsAppBaileysSocket extends Socket {
         const mensaje = {
             text: message.content
         };
-        console.log(`${phone}@s.whatsapp.net`);
         
         await this.sock.sendMessage(`${phone}@s.whatsapp.net`, mensaje);
+        console.log(`${phone}@s.whatsapp.net`);
+        return
     }
 
 
