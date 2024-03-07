@@ -1,16 +1,18 @@
+import 'dotenv/config';
 import express,{Router} from "express"
 import expressWs from 'express-ws'
 import cors from "cors"
 import fs from 'fs'
 import apiRouter from "./routers/api"
 import path from "path"
-
+import cookieParser from "cookie-parser"
 
 const app = express()
 const port = 3000
 const carpetas = 'carpetas.json';
 
 app.use(express.json())
+app.use(cookieParser())
 app.use(cors({ origin:"http://localhost:5173", credentials:true}))
 
 app.use("/api", apiRouter)

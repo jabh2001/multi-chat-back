@@ -68,7 +68,7 @@ export class Column {
         const nullable = this.options.nullable ? "" : "NOT NULL"
         const primaryKey = this.options.primaryKey ? "PRIMARY KEY" : ""
         const unique = this.options.unique ? "UNIQUE" : ""
-        const foreign = this.options.foreign && this.options.foreign.model ? `REFERENCES "${this.options.foreign.model.tableName}"("${this.options.foreign.name}")` : ""
+        const foreign = this.options.foreign && this.options.foreign.model ? `REFERENCES "${this.options.foreign.model.tableName}"("${this.options.foreign.name}") ON DELETE CASCADE` : ""
         const defaultC = this.options.default ? `DEFAULT ${this.options.default}` : ""
         return `"${this.name}" ${this.type}${length} ${nullable} ${primaryKey} ${unique} ${foreign} ${defaultC}`
     }

@@ -4,7 +4,7 @@ export const userSchema = z.object({
     id:z.number().positive(),
     name:z.string({ required_error:"Name is required" }).max(50, "Name length max 50 character"),
     email:z.string().email("Email format error"),
-    password:z.string().min(8, "Min 8 characters").max(16, "Password too long"),
+    password:z.string().min(8, "Min 8 characters").max(32, "Password too long"),
     role:z.enum(["admin", "agent"]),
 })
 
