@@ -33,7 +33,7 @@ const ContactModel = (
         new SerialColumn("id", true),
         new StringColumn("name", 50, { nullable:false }),
         new StringColumn("email", 100, { nullable:false }),
-        new StringColumn("phoneNumber", 15),
+        new StringColumn("phoneNumber", 16),
         new StringColumn("avatarUrl", 255),
     ])
 )
