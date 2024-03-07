@@ -1,17 +1,20 @@
 import { LabelType } from "../types";
 import { LabelModel } from "../libs/models";
+import { labelSchema } from "../libs/schemas";
 
 export const getLabels:GetLabelsType = async () => {
     return await LabelModel.query.fetchAllQuery<LabelType>()
 }
 
 export const saveNewLabel:SaveNewLabelType = async (newLabel) => {
-    return await LabelModel.insert.value(newLabel).fetchOneQuery<LabelType>()
+    const newData = labelSchema.omit({ id:true }).parse(newLabel)
+    return await LabelModel.insert.value(newData).fetchOneQuery<LabelType>()
 }
 export const getLabelById:GetLabelByIdType = async (id) => {
     return await LabelModel.query.filter(LabelModel.c.id.equalTo(id)).fetchOneQuery<LabelType>()
 }
-export const updateLabel:UpdateLabelType = async (id, newData) => {
+export const updateLabel:UpdateLabelType = async (id, newLabel) => {
+    const newData = labelSchema.omit({ id:true }).parse(newLabel)
     return await LabelModel.update.values(newData).filter(LabelModel.c.id.equalTo(id)).fetchOneQuery<LabelType>()
 }
 export const deleteLabel:DeleteLabelType = async (id) => {

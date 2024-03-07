@@ -56,7 +56,7 @@ const ContactLabelModel = (
     ])
 )
 const UserTeamModel = (
-    new Model("contact_label", [
+    new Model("user_team", [
         new IntColumn("userId", 0, { foreign:UserModel.c.id }),
         new IntColumn("teamId", 0, { foreign:TeamModel.c.id }),
     ])

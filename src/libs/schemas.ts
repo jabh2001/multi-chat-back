@@ -25,21 +25,20 @@ export const contactSchema = z.object({
     name:z.string({ required_error:"Name is required" }).max(50, "Name length max 50 character"),
     email:z.string().email("Email format error"),
     phoneNumber:z.string().max(16, "Phone too long"),
-    avatarUrl:z.string().url().max(255, "Url too long 255 chars"),
+    avatarUrl:z.string().max(255, "Url too long 255 chars"),
 })
 
 export const socialMediaSchema = z.object({
     id:z.number().positive(),
     contactId:z.number().positive(),
     name:z.enum(["facebook", "gmail", "instagram", "whatsapp", "telegram", "linkedin", "threads"]),
-    avatarUrl:z.string().url(),
+    url:z.string().url(),
     displayText:z.string().max(50)
 })
 
 export const inboxSchema = z.object({
     id:z.number().positive(),
     name:z.string({ required_error:"Name is required" }).max(50, "Name length max 50 character"),
-    avatarUrl:z.string().url(),
     displayText:z.string().max(50)
 })
 

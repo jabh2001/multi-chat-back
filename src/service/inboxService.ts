@@ -1,4 +1,5 @@
 import { InboxModel } from "../libs/models";
+import { inboxSchema } from "../libs/schemas";
 import { InboxType } from "../types";
 
 export async function getInboxes(){
@@ -6,7 +7,8 @@ export async function getInboxes(){
 }
 
 export async function saveNewInbox(inbox:Omit<InboxType, "id">){
-    return await InboxModel.insert.value(inbox).fetchOneQuery() as InboxType
+    const newData = inboxSchema.omit({ id:true }).parse(inbox)
+    return await InboxModel.insert.value(newData).fetchOneQuery() as InboxType
 }
 
 export async function getInboxById(inboxId:InboxType["id"]){
@@ -14,5 +16,6 @@ export async function getInboxById(inboxId:InboxType["id"]){
 }
 
 export async function updateInbox(inbox:InboxType, newData:Partial<InboxType>){
-    return await InboxModel.update.values(newData).filter(InboxModel.c.id.equalTo(inbox.id)).fetchOneQuery() as InboxType
+    const newDataA = inboxSchema.omit({ id:true }).parse(newData)
+    return await InboxModel.update.values(newDataA).filter(InboxModel.c.id.equalTo(inbox.id)).fetchOneQuery() as InboxType
 }

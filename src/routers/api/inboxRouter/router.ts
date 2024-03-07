@@ -2,6 +2,7 @@ import { Handler, Router } from "express";
 import { getInboxById, getInboxes, saveNewInbox, updateInbox } from "../../../service/inboxService";
 import { getInboxConversationById, getInboxConversations, saveNewConversation, updateInboxConversation } from "../../../service/conversationService";
 import { getMessageByConversation, saveNewMessageInConversation } from "../../../service/messageService";
+import { errorResponse } from "../../../service/errorService";
 
 const inboxRouter = Router()
 
@@ -12,7 +13,7 @@ const getInboxMiddleware: Handler = async (req, res, next) => {
         req.inbox = await getInboxById(id)
         next()
     } catch (e: any) {
-        return res.status(400).json({ error: e.message });
+        return errorResponse(res, e)
     }
 }
 const getConversationMiddleware: Handler = async (req, res, next) => {
@@ -22,24 +23,32 @@ const getConversationMiddleware: Handler = async (req, res, next) => {
         req.inbox.conversation = await getInboxConversationById(req.params.id, id)
         next()
     } catch (e: any) {
-        return res.status(400).json({ error: e.message });
+        return errorResponse(res, e)
     }
 }
 inboxRouter.route("/")
     .get(async (_req, res) => {
-        res.json({ inboxes: await getInboxes() })
+        try {
+            res.json({ inboxes: await getInboxes() })
+        } catch (e: any) {
+            return errorResponse(res, e)
+        }
     })
     .post(async (req, res) => {
         try {
             res.json({ inbox: await saveNewInbox(req.body) })
         } catch (e: any) {
-            return res.status(400).json({ error: e.message });
+            return errorResponse(res, e)
         }
     })
 
 inboxRouter.route("/:id").all(getInboxMiddleware)
     .get(async (req, res) => {
-        res.json({ inbox: req.inbox })
+        try {
+            res.json({ inbox: req.inbox })
+        } catch (e: any) {
+            return errorResponse(res, e)
+        }
     })
     .put(async (req, res) => {
         try {
@@ -47,7 +56,7 @@ inboxRouter.route("/:id").all(getInboxMiddleware)
             if (isNaN(id)) throw new Error("Invalid id")
             res.json({ inbox: await updateInbox(req.inbox, req.body) })
         } catch (e: any) {
-            return res.status(400).json({ error: e.message });
+            return errorResponse(res, e)
         }
     })
 
@@ -56,14 +65,14 @@ inboxRouter.route("/:id/conversation").all(getInboxMiddleware)
         try {
             res.json({ conversations: await getInboxConversations(req.params.id) })
         } catch (e: any) {
-            return res.status(400).json({ error: e.message });
+            return errorResponse(res, e)
         }
     })
     .post(async (req, res) => {
         try {
             res.json({ conversation: await saveNewConversation({ ...req.body, inboxId: req.params.id }) })
         } catch (e: any) {
-            return res.status(400).json({ error: e.message });
+            return errorResponse(res, e)
         }
     })
 
@@ -72,14 +81,14 @@ inboxRouter.route("/:id/conversation/:conversationId").all(getInboxMiddleware, g
         try {
             res.json({ conversation: req.inbox.conversation })
         } catch (e: any) {
-            return res.status(400).json({ error: e.message });
+            return errorResponse(res, e)
         }
     })
     .put(async (req, res) => {
         try {
             res.json({ conversation: await updateInboxConversation(req.inbox.conversation?.id, { ...req.body }) })
         } catch (e: any) {
-            return res.status(400).json({ error: e.message });
+            return errorResponse(res, e)
         }
     })
 inboxRouter.route("/:id/conversation/:conversationId/message").all(getInboxMiddleware, getConversationMiddleware)
@@ -87,14 +96,14 @@ inboxRouter.route("/:id/conversation/:conversationId/message").all(getInboxMiddl
         try {
             res.json({ messages: await getMessageByConversation(req.params.conversationId) })
         } catch (e: any) {
-            return res.status(400).json({ error: e.message });
+            return errorResponse(res, e)
         }
     })
     .post(async (req, res) => {
         try {
             res.json({ message: await saveNewMessageInConversation(req.params.conversationId, { ...req.body }) })
         } catch (e: any) {
-            return res.status(400).json({ error: e.message });
+            return errorResponse(res, e)
         }
     })
 
