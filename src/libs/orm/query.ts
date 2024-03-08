@@ -19,7 +19,7 @@ export class Join{
     }
 
     build(){
-        return `${this.type} JOIN ${this.model.tableName} ON ${this.colA.q} = ${this.colB.q}`
+        return `${this.type} JOIN ${this.model.repository.tableName} ON ${this.colA.q} = ${this.colB.q}`
     }
 }
 
@@ -69,8 +69,9 @@ export class Query {
         const fields = this.columns()
         const [where, params] = this.where.getWhere()
         const join = this.joins.map(j => ` ${j.build()} `).join(" ")
+        const order = this.model.primaryKey ? `ORDER BY ${this.model.primaryKey.q}`:""
 
-        let sql = `SELECT ${fields} FROM ${this.model.tableName} ${join} ${where}`
+        let sql = `SELECT ${fields} FROM ${this.model.repository.tableName} ${join} ${where} ${order}`
         return [sql, params]
     }
 
@@ -81,6 +82,12 @@ export class Query {
             return prev
         }, ret)
         return ret
+    }
+
+    async execute():Promise<any>{
+        const [sql, params] = this.getSQL()
+        const result = await client.query(sql as any, params as any)
+        return this.buildObjectFromRow(result.rows) as any;
     }
 
     async fetchOneQuery<T>():Promise<T>{
@@ -142,7 +149,7 @@ export class Insert extends Query{
     getSQL(): (string | any[])[] {
         const [placeholders, params] = this.placeholders
 
-        let sql = `INSERT INTO ${this.model.tableName} (${this.keys}) VALUES ${placeholders} RETURNING *;`
+        let sql = `INSERT INTO ${this.model.repository.tableName} (${this.keys}) VALUES ${placeholders} RETURNING *;`
         return [sql, params]
     }
 
@@ -176,7 +183,7 @@ export class Update extends Query {
         const [ statement, values ] = this.setStatement()
         const [where, params] = this.where.getWhere(values.length)
 
-        let sql = `UPDATE ${this.model.tableName} ${statement}  ${where} RETURNING *;`
+        let sql = `UPDATE ${this.model.repository.tableName} ${statement}  ${where} RETURNING *;`
         return [sql, [...values, ...params]]
     }
 
@@ -189,7 +196,7 @@ export class Delete extends Query {
     getSQL(): (string | any[])[] {
         const [where, params] = this.where.getWhere()
 
-        let sql = `DELETE FROM ${this.model.tableName} ${where} RETURNING *;`
+        let sql = `DELETE FROM ${this.model.repository.tableName} ${where} RETURNING *;`
         return [sql, params]
     }
 }

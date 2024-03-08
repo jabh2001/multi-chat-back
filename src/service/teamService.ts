@@ -1,4 +1,5 @@
 import { TeamModel } from "../libs/models";
+import { teamSchema } from "../libs/schemas";
 import { TeamType } from "../types";
 
 export const getTeams:GetTeamsType = async () => {
@@ -7,13 +8,15 @@ export const getTeams:GetTeamsType = async () => {
 }
 
 export const saveNewTeam:SaveNewTeamType = async (newTeam) => {
-    const team = await TeamModel.insert.values({ ...newTeam }).fetchOneQuery<TeamType>()
+    const newData = teamSchema.omit({ id:true }).parse(newTeam)
+    const team = await TeamModel.insert.values(newData).fetchOneQuery<TeamType>()
     return team
 }
 export const getTeamById:GetTeamByIdType = async (id) => {
     return await TeamModel.query.filter(TeamModel.c.id.equalTo(id)).fetchOneQuery<TeamType>()
 }
-export const updateTeam:UpdateTeamType = async (id, newData) => {
+export const updateTeam:UpdateTeamType = async (id, newTeam) => {
+    const newData = teamSchema.omit({ id:true }).parse(newTeam)
     return await TeamModel.update.values(newData).filter(TeamModel.c.id.equalTo(id)).fetchOneQuery<TeamType>()
 }
 

@@ -6,32 +6,39 @@ import contactRouter from "./contactRouter"
 import testRouter from "./test"
 import { AgentType, ContactType, ConversationType, InboxType } from "../../types"
 import inboxRouter from "./inboxRouter"
+import authRouter from "./authRouter"
+import { UserType } from "../../libs/schemas"
+import { isAuthenticatedMiddleware } from "../../service/authService"
+
+
+const authenticatedRoute = Router()
+
+authenticatedRoute.use(isAuthenticatedMiddleware)
+authenticatedRoute.use("/team", teamRouter)
+authenticatedRoute.use("/teams", teamRouter)
+
+authenticatedRoute.use("/label", labelRouter)
+authenticatedRoute.use("/labels", labelRouter)
+
+authenticatedRoute.use("/agent", agentRouter)
+authenticatedRoute.use("/agents", agentRouter)
+
+authenticatedRoute.use("/contact", contactRouter)
+authenticatedRoute.use("/contacts", contactRouter)
+authenticatedRoute.use("/test", testRouter)
+
+authenticatedRoute.use("/inbox", inboxRouter)
+authenticatedRoute.use("/inboxes", inboxRouter)
 
 const apiRouter = Router()
-apiRouter.use("/team", teamRouter)
-apiRouter.use("/teams", teamRouter)
-
-apiRouter.use("/label", labelRouter)
-apiRouter.use("/labels", labelRouter)
-
-apiRouter.use("/agent", agentRouter)
-apiRouter.use("/agents", agentRouter)
-
-apiRouter.use("/contact", contactRouter)
-apiRouter.use("/contacts", contactRouter)
-apiRouter.use("/test", testRouter)
-
-apiRouter.use("/inbox", inboxRouter)
-apiRouter.use("/inboxes", inboxRouter)
-
-apiRouter.use((err:any, req:Request, res:Response, next:NextFunction)=>{
-  res.status(500).send('Something broke!');
-})
+apiRouter.use(authRouter)
+apiRouter.use(authenticatedRoute)
 export default apiRouter
 
 declare global {
     namespace Express {
       interface Request {
+        identity:Omit<UserType, "password">
         contact: ContactType
         agent:AgentType
         inbox:Inbox

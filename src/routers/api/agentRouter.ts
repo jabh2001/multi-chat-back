@@ -1,12 +1,13 @@
 import { RequestHandler, Router } from "express"
 import { deleteAgent, getAgentById, getAgentTeams, getAgents, saveNewAgent, updateAgent, updateAgentTeams } from "../../service/agentService"
+import { errorResponse } from "../../service/errorService"
 
 const getUserHandler: RequestHandler = async (req, res, next) => {
     try {
         const agent = await getAgentById(Number(req.params.id))
         req.agent = agent
     } catch (e: any) {
-        return res.status(404).json({ error: e.message })
+        return errorResponse(res, e)
     }
     next()
 }
@@ -15,12 +16,20 @@ const agentRouter = Router()
 
 agentRouter.route("/")
     .get(async (req, res) => {
-        const agents = await getAgents()
-        res.json({ agents })
+        try{
+            const agents = await getAgents()
+            res.json({ agents })
+        } catch (e:any){
+            return res.status(500).json({ error: e.message })
+        }
     })
     .post(async (req, res) => {
-        const agent = await saveNewAgent(req.body)
-        res.json({ agent })
+        try {
+            const agent = await saveNewAgent(req.body)
+            res.json({ agent })
+        } catch (e) {
+            return errorResponse(res, e)
+        }
     })
 
 agentRouter.use("/:id", getUserHandler)
@@ -35,7 +44,7 @@ agentRouter.route("/:id")
             const agent = await updateAgent(req.agent, req.body)
             res.json({ agent })
         } catch (e: any) {
-            return res.status(500).json({ error: e.message })
+            return errorResponse(res, e)
         }
     })
     .delete(async (req, res) => {
@@ -43,7 +52,7 @@ agentRouter.route("/:id")
             const agent = await deleteAgent(req.agent)
             res.json({ agent })
         } catch (e: any) {
-            return res.status(500).json({ error: e.message })
+            return errorResponse(res, e)
         }
     })
 
@@ -52,7 +61,7 @@ agentRouter.route("/:id/teams")
         try {
             res.json({ teams: await getAgentTeams(req.agent) })
         } catch (e: any) {
-            return res.status(404).json({ error: e.message })
+            return errorResponse(res, e)
         }
     })
     .put(async (req, res) => {
@@ -60,7 +69,7 @@ agentRouter.route("/:id/teams")
             const teams = await updateAgentTeams(req.agent, req.body)
             res.json({ teams })
         } catch (e: any) {
-            return res.status(500).json({ error: e.message })
+            return errorResponse(res, e)
         }
     })
 
