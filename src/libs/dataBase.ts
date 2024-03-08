@@ -16,8 +16,8 @@ import { Model } from './orm';
 const dbConfig = {
   user: "postgres",
   host: "localhost",
-  database: "multi-chat",
-  password: "123456",
+  database: "multichat",
+  password: "pokemon70",
   port: 5432,
 };
 

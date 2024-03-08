@@ -17,8 +17,8 @@ app.use("/api", apiRouter)
 
 const { getWss, applyTo } = expressWs(app);
 const qrRouter = Router()
+const rutaQrs = './qrs';
 function enviarListaImagenes(ws:any) {
-    const rutaQrs = './qrs';
     const archivos = fs.readdirSync(rutaQrs);
     const imagenesBase64:object[] = [];
 
@@ -37,11 +37,19 @@ function enviarListaImagenes(ws:any) {
 
 qrRouter.ws('/qr',(ws,rq)=>{
     enviarListaImagenes(ws);
+    ws.on('message',(message)=>{
+        console.log(message)
+        ws.send(message)
+    })
 
-    ws.on('open', () => {
-        console.log('conectado con exito')
-        ws.send('oli'); // Puedes enviar mensajes adicionales al abrir la conexión si es necesario
+    const watcher = fs.watch(rutaQrs);
+
+    watcher.on('change', (eventType, filename) => {
+        console.log(`Algo cambió en la carpeta: ${filename}`);
+        // Ejecuta tu función cuando haya un cambio en la carpeta
+        enviarListaImagenes(ws); // Puedes adaptar esto según tus necesidades
     });
+
 })
 
 
