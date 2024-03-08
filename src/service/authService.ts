@@ -24,7 +24,7 @@ export function getJWTTokenValue(token: string) {
 }
 
 export function assignJWTTokenToCookies(res:Response, token:string){
-    return res.cookie(JWTCookieName, token, { maxAge, httpOnly:true, secure:true, sameSite:false })
+    return res.cookie(JWTCookieName, token, { maxAge, httpOnly:true, secure:true, sameSite:"none" })
 }
 
 export const isAuthenticatedMiddleware = async (req:Request, res:Response, next:NextFunction) =>{

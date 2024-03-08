@@ -69,8 +69,9 @@ export class Query {
         const fields = this.columns()
         const [where, params] = this.where.getWhere()
         const join = this.joins.map(j => ` ${j.build()} `).join(" ")
+        const order = this.model.primaryKey ? `ORDER BY ${this.model.primaryKey.q}`:""
 
-        let sql = `SELECT ${fields} FROM ${this.model.repository.tableName} ${join} ${where}`
+        let sql = `SELECT ${fields} FROM ${this.model.repository.tableName} ${join} ${where} ${order}`
         return [sql, params]
     }
 
