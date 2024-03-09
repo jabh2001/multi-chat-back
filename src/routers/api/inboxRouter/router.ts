@@ -1,8 +1,9 @@
 import { Handler, Router } from "express";
 import { getInboxById, getInboxes, saveNewInbox, updateInbox } from "../../../service/inboxService";
-import { getInboxConversationById, getInboxConversations, saveNewConversation, updateInboxConversation } from "../../../service/conversationService";
+import { getInboxConversationAndContactById, getInboxConversationById, getInboxConversations, saveNewConversation, updateInboxConversation } from "../../../service/conversationService";
 import { getMessageByConversation, saveNewMessageInConversation } from "../../../service/messageService";
 import { errorResponse } from "../../../service/errorService";
+import SocketPool from "../../../libs/socketConnectionPool";
 
 const inboxRouter = Router()
 
@@ -10,7 +11,7 @@ const getInboxMiddleware: Handler = async (req, res, next) => {
     try {
         const id = parseInt(req.params.id)
         if (isNaN(id)) throw new Error("Invalid id")
-        req.inbox = await getInboxById(id)
+        req.inbox = await getInboxById(id) as any
         next()
     } catch (e: any) {
         return errorResponse(res, e)
@@ -20,7 +21,7 @@ const getConversationMiddleware: Handler = async (req, res, next) => {
     try {
         const id = parseInt(req.params.conversationId)
         if (isNaN(id)) throw new Error("Invalid id")
-        req.inbox.conversation = await getInboxConversationById(req.params.id, id)
+        req.inbox.conversation = await getInboxConversationAndContactById(req.params.id, id)
         next()
     } catch (e: any) {
         return errorResponse(res, e)
@@ -106,5 +107,14 @@ inboxRouter.route("/:id/conversation/:conversationId/message").all(getInboxMiddl
             return errorResponse(res, e)
         }
     })
+inboxRouter.put("/:id/conversation/:conversationId/send-message",getInboxMiddleware, getConversationMiddleware, async (req, res) => {
+        try {
+            const connection = SocketPool.getInstance().getBaileysConnection(req.inbox.name)
+            connection?.sendMessage(req.inbox.conversation.contact.phoneNumber, { content:req.body.message } as any)
+        } catch (e: any) {
+            return errorResponse(res, e)
+        }
+    })
+
 
 export default inboxRouter

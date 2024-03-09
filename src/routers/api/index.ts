@@ -13,7 +13,7 @@ import { isAuthenticatedMiddleware } from "../../service/authService"
 
 const authenticatedRoute = Router()
 
-authenticatedRoute.use(isAuthenticatedMiddleware)
+// authenticatedRoute.use(isAuthenticatedMiddleware)
 authenticatedRoute.use("/team", teamRouter)
 authenticatedRoute.use("/teams", teamRouter)
 
@@ -47,5 +47,9 @@ declare global {
 }
 
 interface Inbox extends InboxType {
-  conversation?:ConversationType
+  conversation:Conversation
+}
+
+interface Conversation extends ConversationType {
+  contact:ContactType
 }

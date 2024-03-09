@@ -1,4 +1,4 @@
-import { ConversationModel } from "../libs/models";
+import { ContactModel, ConversationModel } from "../libs/models";
 import { ConversationType } from "../types";
 
 export async function getInboxConversations(inboxId:any){
@@ -12,6 +12,10 @@ export async function saveNewConversation(conversation:Omit<ConversationType, "i
 
 export async function getInboxConversationById(inboxId:any, conversationId:any){
     return await ConversationModel.query.filter(ConversationModel.c.inboxId.equalTo(inboxId), ConversationModel.c.id.equalTo(conversationId)).fetchOneQuery<ConversationType>()
+}
+
+export async function getInboxConversationAndContactById(inboxId:any, conversationId:any){
+    return await ConversationModel.query.filter(ConversationModel.c.inboxId.equalTo(inboxId), ConversationModel.c.id.equalTo(conversationId)).join(ContactModel).fetchOneQuery<ConversationType>()
 }
 
 export async function updateInboxConversation(conversationId:any, newData:any){

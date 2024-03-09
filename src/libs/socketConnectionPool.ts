@@ -3,7 +3,8 @@ import { Boom } from "@hapi/boom"
 import pino from "pino"
 import qrcode from "qrcode"
 import fs from "fs"
-import { MessageType } from "../types"
+import { InboxType, MessageType } from "../types"
+import { InboxModel } from "./models"
 
 const QR_FOLDER = "./QRs"
 abstract class Socket {
@@ -45,7 +46,7 @@ class WhatsAppBaileysSocket extends Socket {
     }
     async start() {
         const { state, saveCreds } = await useMultiFileAuthState(`sessions/${this.folder}`)
-        const sock = makeWASocket({ auth: state,})
+        const sock = makeWASocket({ auth: state, logger:pino({ level:"silent"})})
         sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
             qr && this.saveQRCode(qr)
             if (connection === "close") {
@@ -59,17 +60,12 @@ class WhatsAppBaileysSocket extends Socket {
         })
         sock.ev.on("creds.update", saveCreds)
         sock.ev.on("messages.upsert", this.messageUpsert)
+        sock.sendMessage
         this.sock = sock
     }
 
     async messageUpsert({ messages, type }: { messages: proto.IWebMessageInfo[], type: MessageUpsertType }) {
         console.log(JSON.stringify(messages, null, 4));
-
-        // await this.sock.sendMessage(messages[0]?.key.remoteJid!, { text: "Hola!" })
-        // if(this.sock.sendMessage()){
-
-        //     this.sock.sendMessage(messages[0]?.key.remoteJid!, { text:"Hola!" })
-        // }
     }
 
     async sendMessage(phone: string, message: MessageType) {
@@ -77,9 +73,7 @@ class WhatsAppBaileysSocket extends Socket {
             text: message.content
         };
         
-        await this.sock.sendMessage(`${phone}@s.whatsapp.net`, mensaje);
-        console.log(`${phone}@s.whatsapp.net`);
-        return
+        return await this.sock.sendMessage(`${phone}@s.whatsapp.net`, mensaje);
     }
 
 
@@ -87,10 +81,19 @@ class WhatsAppBaileysSocket extends Socket {
 
 class SocketPool {
     private static instance: SocketPool
-    private pool: Map<string, Socket> = new Map()
+    private pool: Map<string, any> = new Map()
 
     private constructor() {
         this.pool = new Map()
+        this.init()
+    }
+
+    async init(){
+        const inboxes = await InboxModel.query.fetchAllQuery<InboxType>()
+        for (const inbox of inboxes){
+            this.createBaileysConnection(inbox.name)
+            console.log(inbox.name)
+        }
     }
 
     static getInstance() {
@@ -111,6 +114,14 @@ class SocketPool {
         let socket = new WhatsAppBaileysSocket(folder);
         this.pool.set(folder, socket);
         return socket
+    }
+    getOrCreateBaileysConnection(folder: string): WhatsAppBaileysSocket{
+        const connection = this.getBaileysConnection(folder)
+        if (connection){
+            return connection
+        } else {
+            return this.createBaileysConnection(folder)
+        }
     }
 }
 

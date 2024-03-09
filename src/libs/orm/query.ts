@@ -60,8 +60,32 @@ export class Query {
         return this
     }
 
-    join(model:Model, modelC?:Column){
-        this.joins.push(new Join(model, modelC ?? model.primaryKey as any, this.model.primaryKey as any))
+    join(model:Model, columnA?:Column, columnB?:Column){
+        let join : Join | undefined = undefined
+        if (!columnA && !columnB){
+            for(const c of Object.values(model.c) ){
+                if(c.options.foreign && c.options.foreign.model == this.model){
+                    join = new Join(model, c, this.model.primaryKey as any)
+                    break
+                }
+            }
+            if(!join){
+                for(const c of Object.values(this.model.c) ){
+                    if(c.options.foreign && c.options.foreign.model == model){
+                        join = new Join(model, c, model.primaryKey as any)
+                        break
+                    }
+                }
+            }
+        } else if (columnA && !columnB) {
+            let j:Column = Object.values(this.model.c).find((v)=> v.options.foreign === columnA ) || this.model.primaryKey as any
+            join = new  Join(model, columnA, j)
+        } else if(columnA && columnB) {
+            join = new Join(model, columnA, columnB)
+        } else {
+            throw new Error("Join  error, not dependencies found")
+        }
+        this.joins.push(join as Join)
         return this
     }
 

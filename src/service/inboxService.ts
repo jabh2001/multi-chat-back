@@ -1,5 +1,6 @@
 import { InboxModel } from "../libs/models";
 import { inboxSchema } from "../libs/schemas";
+import SocketPool from "../libs/socketConnectionPool";
 import { InboxType } from "../types";
 
 export async function getInboxes(){
@@ -8,7 +9,10 @@ export async function getInboxes(){
 
 export async function saveNewInbox(inbox:Omit<InboxType, "id">){
     const newData = inboxSchema.omit({ id:true }).parse(inbox)
-    return await InboxModel.insert.value(newData).fetchOneQuery() as InboxType
+    const newInbox = await InboxModel.insert.value(newData).fetchOneQuery() as InboxType
+    const pool = SocketPool.getInstance()
+    pool.createBaileysConnection(newInbox.name) //
+    return newInbox
 }
 
 export async function getInboxById(inboxId:InboxType["id"]){
