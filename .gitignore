@@ -27,3 +27,5 @@ sessions/*
 .env
 
 ./sessions/
+
+.code-workspace

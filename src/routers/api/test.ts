@@ -1,8 +1,11 @@
 
+import fs from 'fs'
 import { Router } from "express"
+
 import SocketPool from "../../libs/socketConnectionPool"
 import { MessageType } from "../../types"
-import expressWs from "express-ws";
+
+
 const testRouter = Router()
 let nombre = ''
 
@@ -16,6 +19,7 @@ testRouter.route("/")
         await prueba_.start()
         res.json({ 'mensaje': 'esta es la prueba' })
     })
+    
     .post(async (req, res) => {
         try {
             const { number, message, } = req.body;
@@ -56,17 +60,26 @@ testRouter.route("/")
 
 
 
-// testRouter.ws("/websocket", (ws, req) => {
-//     // WebSocket logic here
-//     // Access ws for handling WebSocket connections
-//     ws.on("message", (msg) => {
-//         // Handle incoming WebSocket messages
-//     });
-
-//     // You can also access req for handling request-related information
-//     // req.body, req.query, etc.
-
-//     // Send a message to the client
-//     ws.send("WebSocket connection established");
-// });
+    testRouter.route('/all').get(async (req, res) => {
+        try {
+            const allSessions = fs.readdirSync('./sessions');
+            console.log(allSessions);
+    
+            for (const sessionName of allSessions) {
+                const instance = SocketPool.getInstance();
+                const session = instance.createBaileysConnection(sessionName);
+                console.log(session);
+    
+                if (session) {
+                    await session.start();
+                }
+            }
+    
+            res.json({ message: 'Sesiones iniciadas' });
+        } catch (error) {
+            console.error('Error al iniciar sesiones:', error);
+            res.status(500).json({ error: 'Error al iniciar sesiones' });
+        }
+    });
+    
 export default testRouter
