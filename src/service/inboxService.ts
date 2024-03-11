@@ -4,7 +4,15 @@ import SocketPool from "../libs/socketConnectionPool";
 import { InboxType } from "../types";
 
 export async function getInboxes(){
-    return await InboxModel.query.fetchAllQuery() as InboxType[]
+    const inboxes = await InboxModel.query.fetchAllQuery() as InboxType[]
+    return inboxes.map(inbox => {
+        const conn = SocketPool.getInstance().getOrCreateBaileysConnection(inbox.name)
+        if (conn){
+            const user = conn.sock.user
+            return { ...inbox, user }
+        }
+        return inbox
+    })
 }
 
 export async function saveNewInbox(inbox:Omit<InboxType, "id">){

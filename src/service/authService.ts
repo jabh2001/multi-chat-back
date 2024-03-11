@@ -28,19 +28,21 @@ export function assignJWTTokenToCookies(res:Response, token:string){
 }
 
 export const isAuthenticatedMiddleware = async (req:Request, res:Response, next:NextFunction) =>{
+    let token
     if(req.headers.authorization){
-        let token = req.headers.authorization.split(' ')[1]
-        let { userId } = getJWTTokenValue(token) as any
-        req.identity = await getAgentById(userId)
-        next()
+        token = req.headers.authorization.split(' ')[1]
     } else if( req.cookies[JWTCookieName] ) {
-        let token = req.cookies[JWTCookieName]
-        let { userId } = getJWTTokenValue(token) as any
-        req.identity = await getAgentById(userId)
-        next()
+        token = req.cookies[JWTCookieName]
     } else {
         res.status(401).json({ message : "You are not authenticated!" })
+        return
     }
+    
+    let jwt = getJWTTokenValue(token) as any
+    if(!jwt) return res.status(401).json({ message : "You are not authenticated!" })
+    const { userId } = jwt
+    req.identity = await getAgentById(userId)
+    next()
 }
 export const isAdminMiddleware = async (req:Request, res:Response, next:NextFunction) =>{
     if(req.headers.authorization){
