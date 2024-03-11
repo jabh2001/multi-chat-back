@@ -2,21 +2,24 @@ import { Router } from "express";
 import fs from 'fs'
 import path from "path"
 import { applyTo } from "../app";
+import { getInboxes } from "./inboxService";
 
 
 const qrRouter = Router()
 const rutaQrs = './qrs';
-function enviarListaImagenes(ws:any) {
+async function enviarListaImagenes(ws:any) {
     const archivos = fs.readdirSync(rutaQrs);
+    const inboxes = await getInboxes()
     const imagenesBase64:object[] = [];
 
-    archivos.forEach((qr) => {
-        const rutaQr = path.join(rutaQrs, qr);
+    inboxes.forEach((inbox:any) => {
+        const rutaQr = path.join(rutaQrs, `qr-${inbox.name}.png`);
         const contenido = fs.readFileSync(rutaQr, { encoding: 'base64' });
 
         imagenesBase64.push({
-            nombre: qr,
+            nombre: inbox.name,
             contenido: contenido,
+            user: !!inbox.user
         });
     });
 
@@ -27,11 +30,9 @@ qrRouter.ws('/qr',(ws,rq)=>{
     console.log("iniciando el socket");
     
     ws.addEventListener("message", (e)=>{
-        console.log('Mensaje recibido en /qr', e.data)
     })
     enviarListaImagenes(ws);
     ws.on('message',(message)=>{
-        console.log({message, onMessage:true})
         ws.send(message)
     })
 

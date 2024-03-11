@@ -1,6 +1,9 @@
-import { ContactModel, ConversationModel } from "../libs/models";
+import { ContactModel, ConversationModel, InboxModel } from "../libs/models";
 import { ConversationType } from "../types";
 
+export async function getConversations(){
+    return await ConversationModel.query.join(InboxModel).join(ContactModel).fetchAllQuery()
+}
 export async function getInboxConversations(inboxId:any){
     return ConversationModel.query.filter(ConversationModel.c.inboxId.equalTo(inboxId)).fetchAllQuery<ConversationType>()
 }

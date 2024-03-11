@@ -1,6 +1,6 @@
 import { Handler, Router } from "express";
 import { getInboxById, getInboxes, saveNewInbox, updateInbox } from "../../../service/inboxService";
-import { getInboxConversationAndContactById, getInboxConversationById, getInboxConversations, saveNewConversation, updateInboxConversation } from "../../../service/conversationService";
+import { getInboxConversationAndContactById, getInboxConversations, saveNewConversation, updateInboxConversation } from "../../../service/conversationService";
 import { getMessageByConversation, saveNewMessageInConversation } from "../../../service/messageService";
 import { errorResponse } from "../../../service/errorService";
 import SocketPool from "../../../libs/socketConnectionPool";
@@ -37,6 +37,7 @@ inboxRouter.route("/")
     })
     .post(async (req, res) => {
         try {
+            console.log(req.body)
             res.json({ inbox: await saveNewInbox(req.body) })
         } catch (e: any) {
             return errorResponse(res, e)

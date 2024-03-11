@@ -9,6 +9,7 @@ import inboxRouter from "./inboxRouter"
 import authRouter from "./authRouter"
 import { UserType } from "../../libs/schemas"
 import { isAuthenticatedMiddleware } from "../../service/authService"
+import conversationRouter from "./conversationRouter"
 
 
 const authenticatedRoute = Router()
@@ -29,6 +30,9 @@ authenticatedRoute.use("/test", testRouter)
 
 authenticatedRoute.use("/inbox", inboxRouter)
 authenticatedRoute.use("/inboxes", inboxRouter)
+
+authenticatedRoute.use("/conversation", conversationRouter)
+authenticatedRoute.use("/conversations", conversationRouter)
 
 const apiRouter = Router()
 apiRouter.use(authRouter)

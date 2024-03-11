@@ -60,7 +60,6 @@ class WhatsAppBaileysSocket extends Socket {
         })
         sock.ev.on("creds.update", saveCreds)
         sock.ev.on("messages.upsert", this.messageUpsert)
-        sock.sendMessage
         this.sock = sock
     }
 
