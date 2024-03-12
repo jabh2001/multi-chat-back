@@ -3,6 +3,7 @@ import { Router } from "express"
 import SocketPool from "../../libs/socketConnectionPool"
 import { MessageType } from "../../types"
 import expressWs from "express-ws";
+import { ServerSentEventClient } from "../../libs/express-sse/ServerSentEventClient";
 const testRouter = Router()
 let nombre = ''
 
@@ -53,20 +54,16 @@ testRouter.route("/")
         }
     }
     );
+let sse:ServerSentEventClient | undefined = undefined
+testRouter.get("/sse", (req, res, next)=>{
+    sse = new ServerSentEventClient(req, res)
+    sse.send("option", "daya")
+    
+    // res.send("hola")
+})
+testRouter.get("/see/msg", (_, res)=>{
+    sse?.send("nada", "de data")
+    res.send("ok!")
+})
 
-
-
-// testRouter.ws("/websocket", (ws, req) => {
-//     // WebSocket logic here
-//     // Access ws for handling WebSocket connections
-//     ws.on("message", (msg) => {
-//         // Handle incoming WebSocket messages
-//     });
-
-//     // You can also access req for handling request-related information
-//     // req.body, req.query, etc.
-
-//     // Send a message to the client
-//     ws.send("WebSocket connection established");
-// });
 export default testRouter
