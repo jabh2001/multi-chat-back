@@ -5,7 +5,7 @@ import { MessageType } from "../types";
 export async function getMessageByConversation(conversationId:any){
     return await MessageModel.query.filter(MessageModel.c.conversationId.equalTo(conversationId)).fetchAllQuery<MessageType>()
 }
-export async function saveNewMessageInConversation(conversationId:any, message:MessageType){
-    const newData = messageSchema.omit({ id:true, conversationId:true })
+export async function saveNewMessageInConversation(conversationId:any, message:any){
+    const newData = messageSchema.omit({ id:true, conversationId:true }).parse(message)
     return await MessageModel.insert.value({ ...newData, conversationId }).filter(MessageModel.c.conversationId.equalTo(conversationId)).fetchOneQuery<MessageType>()
 }

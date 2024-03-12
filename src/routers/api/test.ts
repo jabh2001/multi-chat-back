@@ -1,9 +1,11 @@
 
+import fs from 'fs'
 import { Router } from "express"
+
 import SocketPool from "../../libs/socketConnectionPool"
 import { MessageType } from "../../types"
-import expressWs from "express-ws";
-import { ServerSentEventClient } from "../../libs/express-sse/ServerSentEventClient";
+
+
 const testRouter = Router()
 let nombre = ''
 
@@ -17,6 +19,7 @@ testRouter.route("/")
         await prueba_.start()
         res.json({ 'mensaje': 'esta es la prueba' })
     })
+    
     .post(async (req, res) => {
         try {
             const { number, message, } = req.body;
@@ -54,16 +57,29 @@ testRouter.route("/")
         }
     }
     );
-let sse:ServerSentEventClient | undefined = undefined
-testRouter.get("/sse", (req, res, next)=>{
-    sse = new ServerSentEventClient(req, res)
-    sse.send("option", "daya")
-    
-    // res.send("hola")
-})
-testRouter.get("/see/msg", (_, res)=>{
-    sse?.send("nada", "de data")
-    res.send("ok!")
-})
 
+
+
+    testRouter.route('/all').get(async (req, res) => {
+        try {
+            const allSessions = fs.readdirSync('./sessions');
+            console.log(allSessions);
+    
+            for (const sessionName of allSessions) {
+                const instance = SocketPool.getInstance();
+                const session = instance.createBaileysConnection(sessionName);
+                console.log(session);
+    
+                if (session) {
+                    await session.start();
+                }
+            }
+    
+            res.json({ message: 'Sesiones iniciadas' });
+        } catch (error) {
+            console.error('Error al iniciar sesiones:', error);
+            res.status(500).json({ error: 'Error al iniciar sesiones' });
+        }
+    });
+    
 export default testRouter

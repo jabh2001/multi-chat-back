@@ -46,5 +46,6 @@ qrRouter.ws('/qr',(ws,rq)=>{
 
 })
 
+
 applyTo(qrRouter)
 export default qrRouter

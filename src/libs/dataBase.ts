@@ -4,10 +4,10 @@ import { saveNewAgent } from '../service/agentService';
 
 // Configuración de la conexión a la base de datos
 const dbConfig = {
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
+  user: process.env.DB_USER||'postgres',
+  host: process.env.DB_HOST||'localhost',
+  database: process.env.DB_NAME|| 'multichat',
+  password: process.env.DB_PASSWORD || 'pokemon70',
   port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432,
 };
 
@@ -27,7 +27,7 @@ client.connect()
       await client.query(query);
       const result = await client.query(`SELECT * FROM public."user" where email = 'admin@admin.com' limit 1;`);
       if(!result.rowCount){
-        await saveNewAgent({ name:"admin", email:"admin@admin.com", role:"admin", password:process.env.USER_ADMIN_PASSWORD} as any);
+        await saveNewAgent({ name:"admin", email:"admin@admin.com", role:"admin", password:process.env.USER_ADMIN_PASSWORD||'a super secret passwors'} as any);
       }
     } catch (error) {
       console.error('Error al crear tablas:', error);
