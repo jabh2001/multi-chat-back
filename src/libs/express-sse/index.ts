@@ -1,17 +1,19 @@
 import * as express from "express"
 import { ServerSentEventList } from "./ServerSentEventServer"
-import { Application, RouterLike } from "./types"
+import { Application, RouterLike, type Router as RouterType, Router } from "./types"
 import addSseMethod from "./addSseMethod"
 
 export default function expressSse(app:express.Application, ){
     const clientList = new ServerSentEventList()
     
-    addSseMethod(app)
+    addSseMethod(app, clientList)
     return {
         app:app as Application,
         getClientList:()=>clientList,
-        applyTo:(router:RouterLike) => {
-            addSseMethod(router)
+        SSERouter:() =>{
+            const router = express.Router() as any
+            addSseMethod(router, clientList)
+            return router as RouterType
         }
     }
 }

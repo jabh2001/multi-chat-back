@@ -5,16 +5,22 @@ import qrcode from "qrcode"
 import fs from "fs"
 import { InboxType, MessageType } from "../types"
 import { InboxModel } from "./models"
+import path from "path"
+import { getClientList } from "../app"
 
 const QR_FOLDER = "./QRs"
 abstract class Socket {
     folder: string
 
     get qr_folder() {
-        return `${QR_FOLDER}/${this.qr}`
+        return path.join(QR_FOLDER, this.qr)
     }
     get qr() {
         return `qr-${this.folder}.png`
+    }
+    getQRBase64(){
+        const base64 = fs.readFileSync(this.qr_folder, { encoding: 'base64' });
+        return base64
     }
 
     async saveQRCode(qrData: string) {
@@ -24,8 +30,6 @@ abstract class Socket {
             if (!fs.existsSync(QR_FOLDER)) {
                 fs.mkdirSync(QR_FOLDER);
             }
-            console.log('esta creando el qr')
-            console.log(QR_FOLDER)
             fs.writeFileSync(this.qr_folder, base64Data, 'base64');
         } catch (error) {
             console.error('Error al guardar el código QR:', error);
@@ -90,8 +94,12 @@ class SocketPool {
     async init(){
         const inboxes = await InboxModel.query.fetchAllQuery<InboxType>()
         for (const inbox of inboxes){
-            this.createBaileysConnection(inbox.name)
-            console.log(inbox.name)
+            const conn = this.createBaileysConnection(inbox.name)
+            const watch = fs.watch(conn.qr_folder)
+            watch.on("change", ()=>{
+                const sseClients = getClientList()
+                sseClients.sendToClients("qr-update", JSON.stringify({ name:inbox.name, qr:conn.getQRBase64(), user:conn.sock.user }))
+            })
         }
     }
 

@@ -4,7 +4,9 @@ import SocketPool from "../../libs/socketConnectionPool"
 import { MessageType } from "../../types"
 import expressWs from "express-ws";
 import { ServerSentEventClient } from "../../libs/express-sse/ServerSentEventClient";
+import { SSERouter, getClientList } from "../../app";
 const testRouter = Router()
+const sseRouter = SSERouter()
 let nombre = ''
 
 testRouter.route("/")
@@ -54,16 +56,12 @@ testRouter.route("/")
         }
     }
     );
-let sse:ServerSentEventClient | undefined = undefined
-testRouter.get("/sse", (req, res, next)=>{
-    sse = new ServerSentEventClient(req, res)
-    sse.send("option", "daya")
-    
-    // res.send("hola")
-})
+
+sseRouter.sse("/sse")
 testRouter.get("/see/msg", (_, res)=>{
-    sse?.send("nada", "de data")
+    const list = getClientList()
+    list.sendToClients("nada", "mas")
     res.send("ok!")
 })
-
+testRouter.use(sseRouter)
 export default testRouter

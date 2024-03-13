@@ -20,4 +20,13 @@ export class ServerSentEventList extends EventEmitter{
             client.emit(event, args);
         }
     }
+
+    registryNewClient(req:any, res:any){
+        const newClient = new ServerSentEventClient(req, res)
+        this.clients.add(newClient)
+        newClient.on("close", () =>{
+            this.clients.delete(newClient)
+        })
+        return newClient
+    }
 }

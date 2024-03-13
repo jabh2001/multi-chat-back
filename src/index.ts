@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser"
 import SocketPool from './libs/socketConnectionPool';
 import { app } from './app';
 import qrRouter from './service/qrRouter';
+import listenRouter from './routers/listenRouter';
 SocketPool.getInstance()
 
 
@@ -15,6 +16,7 @@ app.use(cors({ origin:"http://localhost:5173", credentials:true}))
 
 app.use("/api", apiRouter)
 app.use('/ws',qrRouter)
+app.use('/listen', listenRouter)
 
 app.get("/", async (req, res)=>{
     res.send("html")

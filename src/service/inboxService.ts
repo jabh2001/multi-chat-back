@@ -7,11 +7,9 @@ export async function getInboxes(){
     const inboxes = await InboxModel.query.fetchAllQuery() as InboxType[]
     return inboxes.map(inbox => {
         const conn = SocketPool.getInstance().getOrCreateBaileysConnection(inbox.name)
-        if (conn){
-            const user = conn.sock.user
-            return { ...inbox, user }
-        }
-        return inbox
+        const user = conn.sock.user
+        const qr = conn.getQRBase64()
+        return { ...inbox, user, qr }
     })
 }
 
