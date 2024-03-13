@@ -1,4 +1,5 @@
 import makeWASocket, { DisconnectReason, MessageUpsertType, SocketConfig, proto, useMultiFileAuthState } from "@whiskeysockets/baileys"
+import EventEmitter from "events"
 import { Boom } from "@hapi/boom"
 import pino from "pino"
 import qrcode from "qrcode"
@@ -7,7 +8,8 @@ import { InboxType } from "../types"
 import { MessageType } from "./schemas" 
 import { InboxModel } from "./models"
 import path from "path"
-import { getClientList } from "../app"
+import { getClientList, getWss } from "../app"
+
 
 const QR_FOLDER = "./QRs"
 abstract class Socket {
@@ -44,7 +46,7 @@ abstract class Socket {
 }
 class WhatsAppBaileysSocket extends Socket {
     sock: any
-
+    
     constructor(folder: string) {
         super(folder)
         this.start()
@@ -52,6 +54,9 @@ class WhatsAppBaileysSocket extends Socket {
     async start() {
         const { state, saveCreds } = await useMultiFileAuthState(`sessions/${this.folder}`)
         const sock = makeWASocket({ auth: state, logger:pino({ level:"silent"})})
+        const ws = getWss()
+        
+        
         sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
             qr && this.saveQRCode(qr)
             if (connection === "close") {
@@ -69,7 +74,17 @@ class WhatsAppBaileysSocket extends Socket {
     }
 
     async messageUpsert({ messages, type }: { messages: proto.IWebMessageInfo[], type: MessageUpsertType }) {
-        console.log(JSON.stringify(messages, null, 4));
+        messages.forEach((m)=>{
+            console.log(m)
+            const phoneNumber = m.key.remoteJid?.split('@')[0]
+            const mensaje = m.message?.conversation
+            if(m.key.fromMe == true){
+
+            }else{
+
+            }
+        })
+
     }
 
     async sendMessage(phone: string, message: MessageType) {
