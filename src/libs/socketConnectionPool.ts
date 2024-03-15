@@ -5,10 +5,11 @@ import pino from "pino"
 import qrcode from "qrcode"
 import fs from "fs"
 import { InboxType } from "../types"
-import { MessageType } from "./schemas" 
-import { InboxModel } from "./models"
+import { MessageType } from "./schemas"
+import { ContactModel, ConversationModel, InboxModel } from "./models"
 import path from "path"
 import { getClientList, getWss } from "../app"
+import { any, object } from "zod"
 
 
 const QR_FOLDER = "./QRs"
@@ -21,7 +22,7 @@ abstract class Socket {
     get qr() {
         return `qr-${this.folder}.png`
     }
-    getQRBase64(){
+    getQRBase64() {
         const base64 = fs.readFileSync(this.qr_folder, { encoding: 'base64' });
         return base64
     }
@@ -46,17 +47,15 @@ abstract class Socket {
 }
 class WhatsAppBaileysSocket extends Socket {
     sock: any
-    
+
     constructor(folder: string) {
         super(folder)
         this.start()
     }
     async start() {
         const { state, saveCreds } = await useMultiFileAuthState(`sessions/${this.folder}`)
-        const sock = makeWASocket({ auth: state, logger:pino({ level:"silent"})})
-        const ws = getWss()
-        
-        
+        const sock = makeWASocket({ auth: state, logger: pino({ level: "silent" }) })
+
         sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
             qr && this.saveQRCode(qr)
             if (connection === "close") {
@@ -74,14 +73,27 @@ class WhatsAppBaileysSocket extends Socket {
     }
 
     async messageUpsert({ messages, type }: { messages: proto.IWebMessageInfo[], type: MessageUpsertType }) {
-        messages.forEach((m)=>{
-            console.log(m)
-            const phoneNumber = m.key.remoteJid?.split('@')[0]
-            const mensaje = m.message?.conversation
-            if(m.key.fromMe == true){
+        const wss = getWss()
+        messages.forEach(async (m) => {
+            const phoneNumber ='+'+m.key.remoteJid?.split('@')[0]
+            const text = m.message?.conversation||m.message?.extendedTextMessage?.text
+            if (m.key.fromMe == true) {
+            } else {
+                const joinResult = await ContactModel.query.join(
+                    ConversationModel,
+                    ConversationModel.c.senderId,
+                    ContactModel.c.id
+                ).fetchAllQuery()
+                const result = joinResult.find((obj: any) => obj.phoneNumber === phoneNumber)
+                if (result) {
+                    const data ={
+                        result, text
+                    }
+                    for (const ws of wss.clients) {
+                        ws.emit('mensajeRecibido', { ...result, text })
+                    }
 
-            }else{
-
+                }
             }
         })
 
@@ -91,7 +103,7 @@ class WhatsAppBaileysSocket extends Socket {
         const mensaje = {
             text: message.content
         };
-        
+
         return await this.sock.sendMessage(`${phone}@s.whatsapp.net`, mensaje);
     }
 
@@ -107,14 +119,14 @@ class SocketPool {
         this.init()
     }
 
-    async init(){
+    async init() {
         const inboxes = await InboxModel.query.fetchAllQuery<InboxType>()
-        for (const inbox of inboxes){
+        for (const inbox of inboxes) {
             const conn = this.createBaileysConnection(inbox.name)
             const watch = fs.watch(conn.qr_folder)
-            watch.on("change", ()=>{
+            watch.on("change", () => {
                 const sseClients = getClientList()
-                sseClients.sendToClients("qr-update", JSON.stringify({ name:inbox.name, qr:conn.getQRBase64(), user:conn.sock.user }))
+                sseClients.sendToClients("qr-update", JSON.stringify({ name: inbox.name, qr: conn.getQRBase64(), user: conn.sock.user }))
             })
         }
     }
@@ -138,9 +150,9 @@ class SocketPool {
         this.pool.set(folder, socket);
         return socket
     }
-    getOrCreateBaileysConnection(folder: string): WhatsAppBaileysSocket{
+    getOrCreateBaileysConnection(folder: string): WhatsAppBaileysSocket {
         const connection = this.getBaileysConnection(folder)
-        if (connection){
+        if (connection) {
             return connection
         } else {
             return this.createBaileysConnection(folder)

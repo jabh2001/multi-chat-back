@@ -1,8 +1,8 @@
-import { applyTo } from "../app";
+import { applyTo } from "../../app";
 import { Router } from "express";
-import { saveNewMessageInConversation } from "./messageService";
-import SocketPool from "../libs/socketConnectionPool";
-import { ContactType, MessageType } from "../libs/schemas";
+import { saveNewMessageInConversation } from "../../service/messageService";
+import SocketPool from "../../libs/socketConnectionPool";
+import { ContactType, MessageType } from "../../libs/schemas";
 
 const messageWsRouter = Router()
 
@@ -12,8 +12,8 @@ messageWsRouter.ws('/conversation/:id', async (ws, rq) => {
     ws.on('message', async (data) => {
         try {
             const jsonData = JSON.parse(data.toString());
-
             const sender: ContactType = jsonData.sender
+
             console.log(sender)
             const conversationId = jsonData.conversationId
             const messageType = jsonData.messageType
@@ -40,6 +40,23 @@ messageWsRouter.ws('/conversation/:id', async (ws, rq) => {
             console.error("Error parsing JSON:", error);
         }
     });
+    ws.on('mensajeRecibido',async(data)=>{
+        console.log('se recibio del lado del server\n', data)
+        let message:MessageType ={
+            content:data.text,
+            contentType:'text',
+            conversationId:data.conversation.id,
+            id:0,
+            messageType:'incoming',
+            private:true,
+            senderId:data.id
+        }
+        console.log('mensaje del evento',message)
+        const result = await saveNewMessageInConversation(rq.params.id, message)
+        ws.send(JSON.stringify(result))
+
+
+    })
 })
 
 applyTo(messageWsRouter)
