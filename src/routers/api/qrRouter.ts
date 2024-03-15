@@ -1,8 +1,8 @@
 import { Router } from "express";
 import fs from 'fs'
 import path from "path"
-import { applyTo } from "../app";
-import { getInboxes } from "./inboxService";
+import { applyTo } from "../../app";
+import { getInboxes } from "../../service/inboxService";
 
 
 const qrRouter = Router()

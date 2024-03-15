@@ -4,6 +4,8 @@ import { getInboxConversationAndContactById, getInboxConversations, saveNewConve
 import { getMessageByConversation, saveNewMessageInConversation } from "../../../service/messageService";
 import { errorResponse } from "../../../service/errorService";
 import SocketPool from "../../../libs/socketConnectionPool";
+import client from "../../../libs/dataBase";
+import { ContactModel, ConversationModel } from "../../../libs/models";
 
 const inboxRouter = Router()
 
@@ -72,7 +74,16 @@ inboxRouter.route("/:id/conversation").all(getInboxMiddleware)
     })
     .post(async (req, res) => {
         try {
-            res.json({ conversation: await saveNewConversation({ ...req.body, inboxId: req.params.id }) })
+            const senderId = req.body.senderId
+            const inboxId = req.body.inboxId
+            const result =  await ConversationModel.query.filter(ConversationModel.c.inboxId.equalTo(inboxId), ConversationModel.c.senderId.equalTo(senderId)).fetchAllQuery()
+            if(result.length >0){
+                res.json({"mensaje":"ya existe una conversacion"})
+            }else{
+                const newConversation =await saveNewConversation({ ...req.body, inboxId: req.params.id })
+                
+                res.json({ conversation:  newConversation})
+            }
         } catch (e: any) {
             return errorResponse(res, e)
         }
@@ -108,14 +119,14 @@ inboxRouter.route("/:id/conversation/:conversationId/message").all(getInboxMiddl
             return errorResponse(res, e)
         }
     })
-inboxRouter.put("/:id/conversation/:conversationId/send-message",getInboxMiddleware, getConversationMiddleware, async (req, res) => {
-        try {
-            const connection = SocketPool.getInstance().getBaileysConnection(req.inbox.name)
-            connection?.sendMessage(req.inbox.conversation.contact.phoneNumber, { content:req.body.message } as any)
-        } catch (e: any) {
-            return errorResponse(res, e)
-        }
-    })
+inboxRouter.put("/:id/conversation/:conversationId/send-message", getInboxMiddleware, getConversationMiddleware, async (req, res) => {
+    try {
+        const connection = SocketPool.getInstance().getBaileysConnection(req.inbox.name)
+        connection?.sendMessage(req.inbox.conversation.contact.phoneNumber, { content: req.body.message } as any)
+    } catch (e: any) {
+        return errorResponse(res, e)
+    }
+})
 
 
 export default inboxRouter

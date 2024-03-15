@@ -5,9 +5,9 @@ import apiRouter from "./routers/api"
 import cookieParser from "cookie-parser"
 import SocketPool from './libs/socketConnectionPool';
 import { app } from './app';
-import qrRouter from './service/qrRouter';
+import qrRouter from './routers/api/qrRouter';
 import listenRouter from './routers/listenRouter';
-import messageWsRouter from './service/messageRouter';
+import messageWsRouter from './routers/api/messageRouter';
 SocketPool.getInstance()
 
 
