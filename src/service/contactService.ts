@@ -1,4 +1,5 @@
 import { ContactLabelModel, ContactModel, LabelModel, SocialMediaModel } from "../libs/models";
+import { Join } from "../libs/orm/query";
 import { contactSchema, socialMediaSchema } from "../libs/schemas";
 import { ContactType, LabelType, SocialMediaType } from "../types";
 
@@ -28,7 +29,7 @@ export const deleteContact:DeleteContactType = async (contact) => {
 }
 
 export const getContactLabels:getContactLabelsType = async (contact) => {
-    return await LabelModel.query.join(ContactLabelModel, ContactLabelModel.c.labelId).filter(ContactLabelModel.c.contactId.equalTo(contact.id)).fetchAllQuery<LabelType>()
+    return await LabelModel.query.join(ContactLabelModel, ContactLabelModel.c.labelId, LabelModel.c.id, Join.INNER).filter(ContactLabelModel.c.contactId.equalTo(contact.id)).fetchAllQuery<LabelType>()
 }
 
 export const updateContactLabel:UpdateContactLabelType = async (contact, labels) => {

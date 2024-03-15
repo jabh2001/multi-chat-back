@@ -1,78 +1,42 @@
 
-import fs from 'fs'
 import { Router } from "express"
-
+import { Boom } from "@hapi/boom"
+import { ContactModel, ConversationModel, InboxModel, SocialMediaModel } from "../../libs/models"
+import { getWss } from "../../app"
+import { Join } from "../../libs/orm/query"
+import client from "../../libs/dataBase"
 import SocketPool from "../../libs/socketConnectionPool"
-import expressWs from "express-ws";
-import { ServerSentEventClient } from "../../libs/express-sse/ServerSentEventClient";
-import { SSERouter, getClientList } from "../../app";
-import { MessageType } from '../../libs/schemas' 
+import { DisconnectReason } from "@whiskeysockets/baileys"
 
 
 const testRouter = Router()
-const sseRouter = SSERouter()
-let nombre = ''
 
 testRouter.route("/")
-
     .get(async (req, res) => {
-        nombre = req.body.nombre
-        const test = SocketPool.getInstance()
-        const prueba_ = test.createBaileysConnection(nombre)
-        console.log(prueba_)
-        await prueba_.start()
-        res.json({ 'mensaje': 'esta es la prueba' })
-    })
-    
-    // .post(async (req, res) => {
-    //     try {
-    //         const { number, message, } = req.body;
-    //         const test = SocketPool.getInstance();
-    //         const prueba_ = test.getBaileysConnection(nombre);
-    //         // await prueba_.start();
-
-    //         const mensaje: MessageType = {
-    //             contentType:"text",
-
-    //             id: 1,
-    //             content: message,
-    //             private: true,
-                
-    //         };
-
-    //         await prueba_?.sendMessage(number, mensaje);
-    //         res.json({ mensaje: "se envió el mensaje" });
-    //     } catch (error) {
-    //         console.error(error);
-    //         res.status(500).json({ error: "Hubo un error al procesar la solicitud" });
-    //     }
-    // }
-    // );
-
-
-
-    testRouter.route('/all').get(async (req, res) => {
-        try {
-            const allSessions = fs.readdirSync('./sessions');
-            console.log(allSessions);
-    
-            for (const sessionName of allSessions) {
-                const instance = SocketPool.getInstance();
-                const session = instance.createBaileysConnection(sessionName);
-                console.log(session);
-    
-                if (session) {
-                    await session.start();
+        // const query1 = await ConversationModel.query.filter(ConversationModel.c.inboxId.equalTo(1)).fetchAllQuery()
+        // // console.log(query1.getSQL())
+        // const query = ContactModel.query.select(ContactModel.c.name, SocialMediaModel.c.name.label("socialMediaName")).join(SocialMediaModel.r.contact, Join.INNER)
+        // console.log(query.getSQL())
+        // const result = await query.fetchAllQuery()
+        // // const result = await client.query(`ation.id) from conversation`)
+        const conn1 = SocketPool.getInstance().getBaileysConnection("rojo2")
+        const conn2 = SocketPool.getInstance().getBaileysConnection("azul")
+        if(conn1){
+            try{
+                // const res1 = await conn1.sock.sendMessage(`584269165534@s.whatsapp.net`, { text:"Hola"})
+                // console.log({ res1 })
+                await conn1.sock.sendPresenceUpdate("available")
+            } catch (e) {
+                if(e instanceof Boom && e.output.statusCode == DisconnectReason.connectionClosed){
+                    conn1.logout()
+                    console.log(`${conn1.folder} has been disconnected`)
+                } else {
+                    console.log(e)
                 }
             }
-    
-            res.json({ message: 'Sesiones iniciadas' });
-        } catch (error) {
-            console.error('Error al iniciar sesiones:', error);
-            res.status(500).json({ error: 'Error al iniciar sesiones' });
         }
-    }
-    );
-
+        res.send("its ok!")
+    })
+    
     
 export default testRouter

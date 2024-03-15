@@ -1,6 +1,6 @@
 import client from "../dataBase";
 import { Column } from "./column";
-import { Delete, Insert, Query, Update } from "./query";
+import { Delete, Insert, Join, Query, Update } from "./query";
 
 
 export class BaseRepository<T=any> {
@@ -81,29 +81,35 @@ export class BaseModel {
         return instance;
     }
 }
-
-
 export class Model extends BaseModel {
     static modelPool:Model[] = []
     tableName:string
     repository:BaseRepository
     c:{[key:string]:Column}
+    r:{[key:string]:Relation}
 
     constructor(tableName:string, columns:Column[]=[]){
         super()
         Model.modelPool.push(this)
         this.repository = new BaseRepository(tableName)
         this.tableName = tableName
-        this.c = Object.fromEntries(columns.map(c => {
-            c.model = this
-            return [c.name, c]
-        }))
-        
+        this.c = {}
+        this.r = {}
+        columns.forEach(c => this.addColumn(c))
     }
 
     addColumn(column:Column){
         this.c[column.name] = column
         column.model = this
+        if(column.options.foreign && column.options.foreign.model && column.options.relation){
+            const otherColumn = column.options.foreign
+            const otherModel = column.options.foreign.model
+            const oRelation = column.options.relation
+            const newRelation = new Relation(column, otherColumn)
+
+            this.r[oRelation.name] = newRelation
+            otherModel.r[oRelation.backRef] = newRelation
+        }
         return this
     }
 
@@ -150,4 +156,39 @@ export class Model extends BaseModel {
     buildSQL(){
         return `CREATE TABLE IF NOT EXISTS "${this.tableName}" (${ Object.values(this.c).map(c => c.getBuildSQL()).join(",") });`
     }
+}
+
+
+export class Relation {
+    private modelA:Model
+    private modelB: Model
+    private columnA:Column
+    private columnB:Column
+
+    constructor(column:Column, foreign:Column){
+        if(!column.model || !foreign.model){
+            throw new Error("A column must be related to a model")
+        }
+        this.columnA = column
+        this.columnB = foreign
+        this.modelA = column.model
+        this.modelB = foreign.model
+    }
+
+    getJoin(main:"modelA" | "modelB" | Model){
+        let mainM:Model
+        if(main instanceof Model){
+            if(main === this.columnA.model){
+                mainM = this.columnB.model as any
+            } else if(main === this.columnB.model){
+                mainM = this.columnA.model as any
+            } else {
+                throw new Error("Invalid argument for join() method.")
+            }
+        } else{
+            mainM = this[main]
+        }
+        return new Join(mainM, this.columnA, this.columnB)
+    }
+
 }

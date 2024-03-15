@@ -43,7 +43,7 @@ type SocialNetwork = "facebook" | "gmail" | "instagram" | "whatsapp" | "telegram
 const SocialMediaModel = (
     new Model("social_media", [
         new SerialColumn("id", true),
-        new IntColumn("contactId", 0, { nullable:false, foreign:ContactModel.c.id }),
+        new IntColumn("contactId", 0, { nullable:false, foreign:ContactModel.c.id, relation:{name:"contact", backRef:"socialMedia"} }),
         new StringColumn("name", 100, { nullable:false }),
         new StringColumn("url"),
         new StringColumn("displayText", 50),
@@ -73,10 +73,10 @@ const InboxModel = (
 const ConversationModel = (
     new Model("conversation", [
         new SerialColumn("id", true),
-        new IntColumn("inboxId", 0, { foreign:InboxModel.c.id, nullable:false }),
-        new IntColumn("senderId", 0, { foreign:ContactModel.c.id, nullable:false }),
-        new IntColumn("assignedUserId", 0, { foreign:UserModel.c.id, nullable:true }),
-        new IntColumn("assignedTeamId", 0, { foreign:TeamModel.c.id, nullable:true }),
+        new IntColumn("inboxId", 0, { foreign:InboxModel.c.id, nullable:false, relation:{name:"inbox", backRef:"conversations"} }),
+        new IntColumn("senderId", 0, { foreign:ContactModel.c.id, nullable:false, relation:{name:"sender", backRef:"conversations"} }),
+        new IntColumn("assignedUserId", 0, { foreign:UserModel.c.id, nullable:true, relation:{name:"user", backRef:"conversations"} }),
+        new IntColumn("assignedTeamId", 0, { foreign:TeamModel.c.id, nullable:true, relation:{name:"team", backRef:"conversations"} }),
         new TimeStampColumn("createdAt")
     ])
 )
@@ -85,8 +85,8 @@ const ConversationModel = (
 const MessageModel = (
     new Model("message", [
         new SerialColumn("id", true),
-        new IntColumn("conversationId", 0, { foreign:ConversationModel.c.id, nullable:false }),
-        new IntColumn("senderId", 0, { foreign:UserModel.c.id, nullable:true }),
+        new IntColumn("conversationId", 0, { foreign:ConversationModel.c.id, nullable:false, relation:{name:"conversation", backRef:"messages"} }),
+        new IntColumn("senderId", 0, { foreign:UserModel.c.id, nullable:true, relation:{name:"sender", backRef:"messages"} }),
         new StringColumn("content"),
         new StringColumn("contentType", 50),
         new StringColumn("messageType", 50),

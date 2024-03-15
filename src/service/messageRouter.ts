@@ -9,12 +9,17 @@ const messageWsRouter = Router()
 messageWsRouter.ws('/conversation/:id', async (ws, rq) => {
     const poll = SocketPool.getInstance()
     console.log('conectado al mensaje')
+    ws.on("evento", (...e)=>{
+        console.log({"onEvento": e})
+    })  
+    ws.addListener("evento", (...e)=>{
+        console.log({"listener": e})
+    })  
     ws.on('message', async (data) => {
         try {
             const jsonData = JSON.parse(data.toString());
 
             const sender: ContactType = jsonData.sender
-            console.log(sender)
             const conversationId = jsonData.conversationId
             const messageType = jsonData.messageType
             let message: MessageType = {
@@ -27,10 +32,10 @@ messageWsRouter.ws('/conversation/:id', async (ws, rq) => {
                 messageType: messageType
 
             }
-            console.log(message)
             const baileys = poll.getBaileysConnection(jsonData.inbox)
-            console.log(sender.phoneNumber)
-            await baileys?.sendMessage(sender.phoneNumber.split('+')[1], message)
+
+            const msg = await baileys?.sendMessage(sender.phoneNumber.split('+')[1], message)
+            console.log({ msg })
             const result = await saveNewMessageInConversation(rq.params.id, message)
 
             ws.send(JSON.stringify(result))
