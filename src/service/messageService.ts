@@ -7,5 +7,5 @@ export async function getMessageByConversation(conversationId:any){
 }
 export async function saveNewMessageInConversation(conversationId:any, message:any){
     const newData = messageSchema.omit({ id:true, conversationId:true }).parse(message)
-    return await MessageModel.insert.value({ ...newData, conversationId }).filter(MessageModel.c.conversationId.equalTo(conversationId)).fetchOneQuery<MessageType>()
+    return await MessageModel.insert.value({ ...newData, conversationId }).fetchOneQuery<MessageType>()
 }

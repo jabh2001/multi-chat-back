@@ -23,17 +23,15 @@ messageWsRouter.ws('/conversation/:id', async (ws, rq) => {
                 contentType: 'text',
                 content: jsonData.message,
                 private: true,
-                senderId: sender.id,
                 messageType: messageType
-
             }
             console.log(message)
             const baileys = poll.getBaileysConnection(jsonData.inbox)
             console.log(sender.phoneNumber)
             await baileys?.sendMessage(sender.phoneNumber.split('+')[1], message)
-            const result = await saveNewMessageInConversation(rq.params.id, message)
+            // const result = await saveNewMessageInConversation(rq.params.id, message)
 
-            ws.send(JSON.stringify(result))
+            // ws.send(JSON.stringify(result))
 
 
         } catch (error) {
@@ -49,7 +47,6 @@ messageWsRouter.ws('/conversation/:id', async (ws, rq) => {
             id:0,
             messageType:'incoming',
             private:true,
-            senderId:data.id
         }
         console.log('mensaje del evento',message)
         const result = await saveNewMessageInConversation(rq.params.id, message)

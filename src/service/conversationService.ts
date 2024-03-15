@@ -19,7 +19,9 @@ export async function getInboxConversationById(inboxId:any, conversationId:any){
 }
 
 export async function getInboxConversationAndContactById(inboxId:any, conversationId:any){
-    return await ConversationModel.query.filter(ConversationModel.c.inboxId.equalTo(inboxId), ConversationModel.c.id.equalTo(conversationId)).join(ContactModel.r.socialMedia, Join.INNER).fetchOneQuery<ConversationType>()
+    const query = ConversationModel.query.filter(ConversationModel.c.inboxId.equalTo(inboxId), ConversationModel.c.id.equalTo(conversationId)).join(ConversationModel.r.sender, Join.INNER)
+
+    return await query.fetchOneQuery<ConversationType>()
 }
 
 export async function updateInboxConversation(conversationId:any, newData:any){
