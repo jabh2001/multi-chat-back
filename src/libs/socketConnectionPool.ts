@@ -84,13 +84,14 @@ class WhatsAppBaileysSocket extends Socket {
                     ConversationModel.c.senderId,
                     ContactModel.c.id
                 ).fetchAllQuery()
-                const result = joinResult.find((obj: any) => obj.phoneNumber === phoneNumber)
+                const result:any = joinResult.find((obj: any) => obj.phoneNumber === phoneNumber)
+                const conversationID = result?.conversation.id
                 if (result) {
                     const data ={
                         result, text
                     }
                     for (const ws of wss.clients) {
-                        ws.emit('mensajeRecibido', { ...result, text })
+                        ws.emit('message-upsert'+conversationID, { ...result, text })
                     }
 
                 }
