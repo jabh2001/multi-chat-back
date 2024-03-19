@@ -80,7 +80,7 @@ class WhatsAppBaileysSocket extends Socket {
         
     }
     sentCreds(){
-        sseClients.sendToClients("qr-update", JSON.stringify({ name:this.folder, user:this.sock.user ?? false, qr:this.getQRBase64() }))
+        sseClients.emitToClients("qr-update", { name:this.folder, user:this.sock.user ?? false, qr:this.getQRBase64() })
     }
 
     async verifyStatus(logout=false){

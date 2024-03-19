@@ -8,6 +8,7 @@ import { app } from './app';
 import qrRouter from './routers/api/qrRouter';
 import listenRouter from './routers/listenRouter';
 import messageWsRouter from './routers/api/messageRouter';
+import { isAuthenticatedMiddleware } from './service/authService';
 SocketPool.getInstance()
 
 
@@ -16,7 +17,7 @@ app.use(cookieParser())
 app.use(cors({ origin:"http://localhost:5173", credentials:true}))
 
 app.use("/api", apiRouter)
-app.use('/listen', listenRouter)
+app.use('/listen', isAuthenticatedMiddleware, listenRouter)
 app.use('/ws',messageWsRouter)
 
 app.get("/", async (req, res)=>{

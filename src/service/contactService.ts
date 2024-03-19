@@ -1,7 +1,10 @@
+import { getClientList } from "../app";
 import { ContactLabelModel, ContactModel, LabelModel, SocialMediaModel } from "../libs/models";
 import { Join } from "../libs/orm/query";
 import { contactSchema, socialMediaSchema } from "../libs/schemas";
 import { ContactType, LabelType, SocialMediaType } from "../types";
+
+const sseClients = getClientList()
 
 export const getContacts:GetContactsType = async (labelId=undefined) => {
     const contacts = await ContactModel.query.fetchAllQuery<ContactType>()
@@ -10,7 +13,9 @@ export const getContacts:GetContactsType = async (labelId=undefined) => {
 
 export const saveNewContact:SaveNewContactType = async (newContact) => {
     const newData = contactSchema.omit({ id:true, avatarUrl:true }).parse(newContact)
-    return await ContactModel.insert.values({...newData, avatarUrl:newData.name.replace(" ", "_") + ".png"}).fetchOneQuery<ContactType>()
+    const contact = await ContactModel.insert.values({...newData, avatarUrl:newData.name.replace(" ", "_") + ".png"}).fetchOneQuery<ContactType>()
+    sseClients.emitToClients("insert-contact", contact)
+    return contact
 }
 
 export const getContactById:GetContactByIdType = async (id) => {
@@ -22,10 +27,14 @@ export const updateContact:UpdateContactType = async (contact, newContact) => {
     if(Object.keys(newData).length == 0){
         return await getContactById(contact.id)
     }
-    return await ContactModel.update.values(newData).filter(ContactModel.c.id.equalTo(contact.id)).fetchOneQuery()
+    const contact_ = await ContactModel.update.values(newData).filter(ContactModel.c.id.equalTo(contact.id)).fetchOneQuery<ContactType>()
+    sseClients.emitToClients("update-contact", contact_)
+    return contact_
 }
 export const deleteContact:DeleteContactType = async (contact) => {
-    return await ContactModel.delete.filter(ContactModel.c.id.equalTo(contact.id)).fetchOneQuery()
+    const contact_ = await ContactModel.delete.filter(ContactModel.c.id.equalTo(contact.id)).fetchOneQuery<ContactType>()
+    sseClients.emitToClients("delete-contact", [contact_.id])
+    return contact_
 }
 
 export const getContactLabels:getContactLabelsType = async (contact) => {

@@ -1,5 +1,6 @@
 import EventEmitter from "events";
 import { ServerSentEventClient } from "./ServerSentEventClient";
+import { MultiChatEventMap, MultiChatEventName } from "../SSEventHandle/Events";
 
 export class ServerSentEventList extends EventEmitter{
     clients:Set<ServerSentEventClient>
@@ -9,15 +10,15 @@ export class ServerSentEventList extends EventEmitter{
         this.clients = new Set()
     }
 
-    sendToClients(event:string, data:string){
+    sendToClients(event:MultiChatEventName, data:string){
         for (const client of this.clients) {
             client.send(event,data);
         }
     }
 
-    emitToClients(event:string, ...args:any[]){
+    emitToClients<EventName extends MultiChatEventName>(event:EventName, ...args:MultiChatEventMap[EventName][]){
         for (const client of this.clients) {
-            client.emit(event, args);
+            client.emit(event, ...args);
         }
     }
 

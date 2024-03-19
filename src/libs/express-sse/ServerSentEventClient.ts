@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import { Request, Response } from "express";
-import { setInterval } from "timers/promises";
+import { MultiChatEventMap, MultiChatEventName } from "../SSEventHandle/Events";
 const HEADERS = {
     'Content-Type': 'text/event-stream',
     'Connection': 'keep-alive',
@@ -23,7 +23,10 @@ export class ServerSentEventClient extends EventEmitter {
     init() {
         this.res.writeHead(200, HEADERS);
         this.sendMessage("HelloConnection")
-        this.req.on('close', () => this.emitClose());
+        this.req.on('close', () => {
+            this.emitClose()
+            this.res.end()
+        });
     }
 
     emitClose(){
@@ -37,5 +40,11 @@ export class ServerSentEventClient extends EventEmitter {
     sendMessage(msg: string) {
         this.send("message", msg)
     }
-    
+    emit<EventName extends MultiChatEventName>(eventName: EventName, ...arg:MultiChatEventMap[EventName][]): boolean {
+        this.send(eventName, JSON.stringify(arg))
+        return super.emit(eventName, ...arg);
+    }
+    on<EventName extends MultiChatEventName>(eventName: EventName, listener: (...args: MultiChatEventMap[EventName][]) => void): this {
+        return super.on(eventName, listener);
+    }
 }

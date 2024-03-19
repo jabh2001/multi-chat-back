@@ -1,9 +1,10 @@
+import { getClientList } from "../app";
 import { TeamModel, UserModel, UserTeamModel } from "../libs/models";
 import { Join } from "../libs/orm/query";
 import { userSchema } from "../libs/schemas";
 import { AgentType, TeamType, UserType } from "../types";
 import bcrypt from "bcrypt"
-
+const sseClients = getClientList()
 const salt = 10
 
 export const getAgents:GetAgentsType = async () => {
@@ -14,7 +15,9 @@ export const getAgents:GetAgentsType = async () => {
 
 export const saveNewAgent:SaveNewAgentType = async (newAgent) => {
     const newData = userSchema.omit({ id:true }).parse(newAgent)
-    return await UserModel.insert.value({ ...newData, password:await bcrypt.hash(newData.password, salt) }).fetchOneQuery()
+    const agent = await UserModel.insert.value({ ...newData, password:await bcrypt.hash(newData.password, salt) }).fetchOneQuery<AgentType>()
+    sseClients.emitToClients("insert-agent", agent)
+    return agent
 }
 export const getAgentById:GetAgentByIdType = async (id) => {
     const user = await UserModel.query.filter(UserModel.c.id.equalTo(id)).fetchOneQuery()
@@ -24,11 +27,16 @@ export const getAgentById:GetAgentByIdType = async (id) => {
 export const updateAgent:UpdateAgentType = async (agent, newAgent) => {
     const newData = userSchema.omit({ id:true }).partial().parse(newAgent)
     const user = await UserModel.update.values(newData).filter(UserModel.c.id.equalTo(agent.id)).fetchOneQuery()
-    return userSchema.omit({ password:true }).parse(user) as any
+    const parserUser =  userSchema.omit({ password:true }).parse(user)
+    sseClients.emitToClients("update-agent", parserUser)
+    return parserUser as any
+
 }
 
 export const deleteAgent:DeleteAgentType = async (agent) => {
-    return await UserModel.delete.filter(UserModel.c.id.equalTo(agent.id)).fetchOneQuery()
+    const deleted =  await UserModel.delete.filter(UserModel.c.id.equalTo(agent.id)).fetchOneQuery<AgentType>()
+    sseClients.emitToClients("delete-agent", [deleted.id])
+    return deleted
 }
 
 export const getAgentTeams:getAgentTeamsType = async (agent) => {
