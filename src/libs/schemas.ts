@@ -47,11 +47,13 @@ export const messageSchema = z.object({
     conversationId:z.number().positive(),
     senderId:z.number().positive().optional(),
     content:z.string(),
+    whatsapp_id:z.string().optional(),
+    status:z.boolean().optional(),
     contentType:z.string(),
     messageType:z.enum(["incoming", "outgoing"]),
     private:z.boolean().default(false),
     createdAt:z.date().optional(),
-})
+})      
 
 export type UserType = z.infer<typeof userSchema>
 export type LabelType = z.infer<typeof labelSchema>

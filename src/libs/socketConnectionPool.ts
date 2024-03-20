@@ -75,27 +75,23 @@ class WhatsAppBaileysSocket extends Socket {
     async messageUpsert({ messages, type }: { messages: proto.IWebMessageInfo[], type: MessageUpsertType }) {
         const wss = getWss()
         messages.forEach(async (m) => {
-            const phoneNumber ='+'+m.key.remoteJid?.split('@')[0]
-            const text = m.message?.conversation||m.message?.extendedTextMessage?.text
-            if (m.key.fromMe == true) {
-            } else {
-                const joinResult = await ContactModel.query.join(
-                    ConversationModel,
-                    ConversationModel.c.senderId,
-                    ContactModel.c.id
-                ).fetchAllQuery()
-                const result:any = joinResult.find((obj: any) => obj.phoneNumber === phoneNumber)
-                const conversationID = result?.conversation.id
-                if (result) {
-                    const data ={
-                        result, text
-                    }
-                    for (const ws of wss.clients) {
-                        ws.emit('message-upsert'+conversationID, { ...result, text })
-                    }
+            const phoneNumber = '+' + m.key.remoteJid?.split('@')[0]
+            const text = m.message?.conversation || m.message?.extendedTextMessage?.text
+            const joinResult = await ContactModel.query.join(
+                ConversationModel,
+                ConversationModel.c.senderId,
+                ContactModel.c.id
+            ).fetchAllQuery()
+            const result: any = joinResult.find((obj: any) => obj.phoneNumber === phoneNumber)
+            const conversationID = result?.conversation.id
+            const fromMe = m.key.fromMe === true;
 
+            if (result) {
+                for (const ws of wss.clients) {
+                    ws.emit('message-upsert' + conversationID, { ...result, text, fromMe, messageID:m.key.id });
                 }
             }
+
         })
 
     }
