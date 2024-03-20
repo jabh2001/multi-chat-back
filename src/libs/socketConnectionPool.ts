@@ -99,44 +99,45 @@ class WhatsAppBaileysSocket extends Socket {
             }
         }
     }
-    async logout(){
-        this.sock.authState.creds = {
-            ...this.sock.authState.creds,
-            account: undefined, 
-            me: undefined, 
-            signalIdentities: undefined, 
-            platform: undefined, 
-            lastAccountSyncTimestamp: undefined, 
-            myAppStateKeyId: undefined, 
+    async logout() {
+        const carpetas = '../../sessions'
+        const sesion = this.folder
+        const carpetaSesion = path.join(carpetas, sesion);
+
+        // Verificar si la carpeta existe
+        if (fs.existsSync(carpetaSesion)) {
+            // Eliminar la carpeta
+            fs.rmdir(carpetaSesion, { recursive: true }, (err) => {
+                if (err) {
+                    console.error('Error al eliminar la carpeta:', err);
+                } else {
+                    console.log('Carpeta eliminada correctamente');
+                }
+            });
         }
-        this.sock.ev.emit("creds.update", this.sock.authState.creds)
-        this.sentCreds()
-        await this.start()
     }
+
 
     async messageUpsert({ messages, type }: { messages: proto.IWebMessageInfo[], type: MessageUpsertType }) {
         const wss = getWss()
         messages.forEach(async (m) => {
-            const phoneNumber ='+'+m.key.remoteJid?.split('@')[0]
-            const text = m.message?.conversation||m.message?.extendedTextMessage?.text
-            if (m.key.fromMe == true) {
-            } else {
-                const joinResult = await ContactModel.query.join(
-                    ConversationModel,
-                    ConversationModel.c.senderId,
-                    ContactModel.c.id
-                ).fetchAllQuery()
-                const result = joinResult.find((obj: any) => obj.phoneNumber === phoneNumber)
-                if (result) {
-                    const data ={
-                        result, text
-                    }
-                    for (const ws of wss.clients) {
-                        ws.emit('mensajeRecibido', { ...result, text })
-                    }
+            const phoneNumber = '+' + m.key.remoteJid?.split('@')[0]
+            const text = m.message?.conversation || m.message?.extendedTextMessage?.text
+            const joinResult = await ContactModel.query.join(
+                ConversationModel,
+                ConversationModel.c.senderId,
+                ContactModel.c.id
+            ).fetchAllQuery()
+            const result: any = joinResult.find((obj: any) => obj.phoneNumber === phoneNumber)
+            const conversationID = result?.conversation.id
+            const fromMe = m.key.fromMe === true;
 
+            if (result) {
+                for (const ws of wss.clients) {
+                    ws.emit('message-upsert' + conversationID, { ...result, text, fromMe, messageID:m.key.id });
                 }
             }
+
         })
 
     }
