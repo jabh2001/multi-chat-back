@@ -1,3 +1,4 @@
+import { string } from "zod"
 import { Column, Model } from "./orm"
 import { BooleanColumn, IntColumn, SerialColumn, StringColumn, TimeStampColumn } from "./orm/column"
 
@@ -85,8 +86,10 @@ const ConversationModel = (
 const MessageModel = (
     new Model("message", [
         new SerialColumn("id", true),
-        new IntColumn("conversationId", 0, { foreign:ConversationModel.c.id, nullable:false, relation:{name:"conversation", backRef:"messages"} }),
-        new IntColumn("senderId", 0, { foreign:UserModel.c.id, nullable:true, relation:{name:"sender", backRef:"messages"} }),
+        new IntColumn("conversationId", 0, { foreign:ConversationModel.c.id, nullable:false }),
+        new IntColumn("senderId", 0, { foreign:UserModel.c.id, nullable:true }),
+        new StringColumn('whatsappId'),
+        new BooleanColumn('status',true),
         new StringColumn("content"),
         new StringColumn("contentType", 50),
         new StringColumn("messageType", 50),
