@@ -1,8 +1,9 @@
 import { ContactModel, ConversationModel, InboxModel } from "../libs/models";
+import { Join } from "../libs/orm/query";
 import { ConversationType } from "../types";
 
 export async function getConversations(){
-    return await ConversationModel.query.join(InboxModel).join(ContactModel).fetchAllQuery()
+    return await ConversationModel.query.join(ConversationModel.r.inbox, Join.INNER).join(ConversationModel.r.sender, Join.INNER).fetchAllQuery()
 }
 export async function getInboxConversations(inboxId:any){
     return ConversationModel.query.filter(ConversationModel.c.inboxId.equalTo(inboxId)).fetchAllQuery<ConversationType>()
@@ -18,7 +19,9 @@ export async function getInboxConversationById(inboxId:any, conversationId:any){
 }
 
 export async function getInboxConversationAndContactById(inboxId:any, conversationId:any){
-    return await ConversationModel.query.filter(ConversationModel.c.inboxId.equalTo(inboxId), ConversationModel.c.id.equalTo(conversationId)).join(ContactModel).fetchOneQuery<ConversationType>()
+    const query = ConversationModel.query.filter(ConversationModel.c.inboxId.equalTo(inboxId), ConversationModel.c.id.equalTo(conversationId)).join(ConversationModel.r.sender, Join.INNER)
+
+    return await query.fetchOneQuery<ConversationType>()
 }
 
 export async function updateInboxConversation(conversationId:any, newData:any){

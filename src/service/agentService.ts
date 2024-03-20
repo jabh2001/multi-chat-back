@@ -1,4 +1,5 @@
 import { TeamModel, UserModel, UserTeamModel } from "../libs/models";
+import { Join } from "../libs/orm/query";
 import { userSchema } from "../libs/schemas";
 import { AgentType, TeamType, UserType } from "../types";
 import bcrypt from "bcrypt"
@@ -31,7 +32,7 @@ export const deleteAgent:DeleteAgentType = async (agent) => {
 }
 
 export const getAgentTeams:getAgentTeamsType = async (agent) => {
-    return await TeamModel.query.join(UserTeamModel, UserTeamModel.c.teamId).filter(UserTeamModel.c.userId.equalTo(agent.id)).fetchAllQuery()
+    return await TeamModel.query.join(UserTeamModel, UserTeamModel.c.teamId, TeamModel.c.id, Join.INNER).filter(UserTeamModel.c.userId.equalTo(agent.id)).fetchAllQuery()
 }
 
 export const updateAgentTeams:UpdateAgentTeamsType = async (agent, teams)=>{

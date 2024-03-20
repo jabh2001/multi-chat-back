@@ -1,5 +1,5 @@
-import { Model } from "./model"
-import { Condition } from "./query"
+import { Model, Relation } from "./model"
+import { Condition, Join, Order } from "./query"
 
 type ColumnOption = {
     nullable:boolean
@@ -7,6 +7,8 @@ type ColumnOption = {
     unique:boolean
     foreign:Column | false
     default:any | false
+    label?:string
+    relation: { name:string, backRef:string } | false
 }
 type PartialOption = Partial<ColumnOption>
 
@@ -21,6 +23,7 @@ export class Column {
             unique:false,
             foreign:false,
             default:false,
+            relation:false,
             ...option
         }
     }
@@ -30,6 +33,7 @@ export class Column {
     }
     get tag(){
         if(!this.model) return ""
+        if(this.options.label) return `"${this.options.label}"`
         const tableName = this.model.tableName
         return `${tableName}_${this.name}`
     }
@@ -71,6 +75,17 @@ export class Column {
         const foreign = this.options.foreign && this.options.foreign.model ? `REFERENCES "${this.options.foreign.model.tableName}"("${this.options.foreign.name}") ON DELETE CASCADE` : ""
         const defaultC = this.options.default ? `DEFAULT ${this.options.default}` : ""
         return `"${this.name}" ${this.type}${length} ${nullable} ${primaryKey} ${unique} ${foreign} ${defaultC}`
+    }
+    label(label:string){
+        const col = new Column(this.name, this.type, this.length, {...this.options, label});
+        col.model = this.model
+        return col
+    }
+    asc(){
+        return Order.asc(this)
+    }
+    desc(){
+        return Order.desc(this)
     }
 }
 

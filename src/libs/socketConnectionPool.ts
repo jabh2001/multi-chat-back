@@ -12,7 +12,9 @@ import { getClientList, getWss } from "../app"
 import { any, object } from "zod"
 
 
+const sseClients = getClientList()
 const QR_FOLDER = "./QRs"
+
 abstract class Socket {
     folder: string
 
@@ -61,16 +63,60 @@ class WhatsAppBaileysSocket extends Socket {
             if (connection === "close") {
                 const reason = new Boom(lastDisconnect?.error).output.statusCode
                 const shouldReconnect = reason !== DisconnectReason.loggedOut
+                const shouldLogout = reason !== DisconnectReason.connectionClosed
 
                 if (shouldReconnect) {
                     await this.start()
+                } else if( shouldLogout){
+                    await this.logout()
                 }
+            } else if (connection === "open"){
+                this.sentCreds()
             }
         })
-        sock.ev.on("creds.update", saveCreds)
-        sock.ev.on("messages.upsert", this.messageUpsert)
+        sock.ev.on("creds.update", async () => await Promise.all([ saveCreds(), this.sentCreds() ]) )
+        sock.ev.on("messages.upsert", evt => this.messageUpsert(evt))
         this.sock = sock
+        
     }
+    sentCreds(){
+        sseClients.sendToClients("qr-update", JSON.stringify({ name:this.folder, user:this.sock.user ?? false, qr:this.getQRBase64() }))
+    }
+
+    async verifyStatus(logout=false){
+        try{
+            await this.sock.sendPresenceUpdate("available")
+            return true
+        } catch (e) {
+            if(e instanceof Boom && e.output.statusCode == DisconnectReason.connectionClosed){
+                if(logout){
+                    await this.logout()
+                }
+                return false
+            } else {
+                console.log("Verify error")
+                console.log({ e })
+            }
+        }
+    }
+    async logout() {
+        const carpetas = '../../sessions'
+        const sesion = this.folder
+        const carpetaSesion = path.join(carpetas, sesion);
+
+        // Verificar si la carpeta existe
+        if (fs.existsSync(carpetaSesion)) {
+            // Eliminar la carpeta
+            fs.rmdir(carpetaSesion, { recursive: true }, (err) => {
+                if (err) {
+                    console.error('Error al eliminar la carpeta:', err);
+                } else {
+                    console.log('Carpeta eliminada correctamente');
+                }
+            });
+        }
+    }
+
 
     async messageUpsert({ messages, type }: { messages: proto.IWebMessageInfo[], type: MessageUpsertType }) {
         const wss = getWss()
@@ -121,9 +167,8 @@ class SocketPool {
         for (const inbox of inboxes) {
             const conn = this.createBaileysConnection(inbox.name)
             const watch = fs.watch(conn.qr_folder)
-            watch.on("change", () => {
-                const sseClients = getClientList()
-                sseClients.sendToClients("qr-update", JSON.stringify({ name: inbox.name, qr: conn.getQRBase64(), user: conn.sock.user }))
+            watch.on("change", ()=>{
+                conn.sentCreds()
             })
         }
     }

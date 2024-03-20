@@ -1,6 +1,9 @@
 import client from "../dataBase"
 import { Column } from "./column"
-import { Model } from "./model"
+import { Model, Relation } from "./model"
+
+type JoinArgs = [Join] | [Relation, Join["type"]]  | [Model, Column, Column] | [Model, Column, Column, Join["type"]]
+type Field = Column | Query
 
 export class Join{
     private _model:Model
@@ -8,6 +11,9 @@ export class Join{
     private colB:Column
     private type:'INNER'|'LEFT'|'RIGHT'
 
+    set joinType(type:Join["type"]){
+        this.type = type
+    }
     get model(){
         return this._model
     }
@@ -21,37 +27,77 @@ export class Join{
     build(){
         return `${this.type} JOIN ${this.model.repository.tableName} ON ${this.colA.q} = ${this.colB.q}`
     }
+
+    static INNER = "INNER" as const
+    static LEFT = "LEFT" as const
+    static RIGHT = "RIGHT" as const
 }
 
 export class Query {
     protected model:Model
-    protected fields:Column[]
+    protected fields:Field[]
+    protected isAllSelect:boolean
     protected where:Where
     protected joins:Join[]
-    protected order:Order
-
+    protected _order?:Order
+    private _limit:number
+    private _offset:number
 
     constructor(model: Model) {
         this.model = model;
-        this.where = new Where();
-        this.order = new Order()
+        this.where = new Where()
+        this._order = model.primaryKey?.asc()
         this.fields = Object.values(model.c)
+        this.isAllSelect = true
         this.joins = []
+        this._limit = 0
+        this._offset = 0
+    }
+
+    get limit(){
+        return  this._limit
+    }
+
+    set limit(limit){
+        if(limit < 0) throw Error("Limit can't be negative")
+        this._limit = limit
+    }
+
+    get offset(){
+        return  this._offset
+    }
+
+    set offset(offset){
+        if(offset < 0) throw Error("offset can't be negative")
+        this._offset = offset
     }
 
     columns(){
-        const _fields = [...this.fields]
-        if (this.joins.length >0){
-            for (const join of this.joins) {
-                _fields.push(...Object.values(join.model.c))
+        let _fields:Field[] = []
+        if(this.isAllSelect){
+            _fields = [...this.fields]
+            if (this.joins.length >0){
+                for (const join of this.joins) {
+                    _fields.push(...Object.values(join.model.c))
+                }
             }
+        } else {
+            _fields = [...this.fields]
         }
-        const fields = _fields.map(({ q, tag }) => `${q} as ${tag}`).join(',')
+        const rawFields = _fields.map(field => {
+            if(field instanceof Column){
+                const { q, tag } = field
+                return `${q} as ${tag}`
+            }
+            throw new Error(`Not valid field ${field}`)
+        })
+        const fields = rawFields.join(',')
         return fields
     }
 
-    select(...fields: Column[]){
+    select(...fields: Field[]){
         this.fields =  fields
+        this.isAllSelect = false
         return this
     }
 
@@ -59,8 +105,31 @@ export class Query {
         this.where.conditionList = this.where.conditionList.concat(condition)
         return this
     }
-
-    join(model:Model, columnA?:Column, columnB?:Column){
+    join(...args:JoinArgs){
+        const [arg1, arg2, arg3, arg4] = args
+        if(arg1 instanceof Join){
+            this.joins.push(arg1)
+        } else if(arg1 instanceof Relation){
+            let join = arg1.getJoin(this.model)
+            if(arg2 && !(arg2 instanceof Column)){
+                join.joinType = arg2
+            }
+            this.joins.push(join)
+        } else if(arg2 instanceof Column && arg3 instanceof Column){
+            this.joins.push(new Join(arg1, arg2, arg3, arg4 ?? Join.INNER))
+        }
+        return this
+    }
+    order(criteria:Column | Order){
+        if(criteria instanceof Column){
+            this._order = Order.asc(criteria)
+        } else {
+            this._order = criteria
+        }
+        return this
+    }
+    // Alias for join () but for support change
+    bind(model:Model, columnA?:Column, columnB?:Column){
         let join : Join | undefined = undefined
         if (!columnA && !columnB){
             for(const c of Object.values(model.c) ){
@@ -93,19 +162,34 @@ export class Query {
         const fields = this.columns()
         const [where, params] = this.where.getWhere()
         const join = this.joins.map(j => ` ${j.build()} `).join(" ")
-        const order = this.model.primaryKey ? `ORDER BY ${this.model.primaryKey.q}`:""
+        const order = this._order ? this._order.getOrder() :""
+        const limit = this.limit > 0 ? `LIMIT ${this.limit}`: ""
+        const offset = this.offset > 0 ? `OFFSET ${this.offset}`: ""
 
-        let sql = `SELECT ${fields} FROM ${this.model.repository.tableName} ${join} ${where} ${order}`
+        let sql = `SELECT ${fields} FROM ${this.model.repository.tableName} ${join} ${where} ${order} ${limit} ${offset}`
         return [sql, params]
     }
 
     buildObjectFromRow(row:any){
-        const ret = this.model.buildObjectFromRow(row)
-        this.joins.reduce((prev:any, current, i)=>{
-            prev[current.model.tableName] = current.model.buildObjectFromRow(row)
-            return prev
-        }, ret)
-        return ret
+        if(this.isAllSelect){
+            const ret = this.model.buildObjectFromRow(row)
+            this.joins.reduce((prev:any, current, i)=>{
+                prev[current.model.tableName] = current.model.buildObjectFromRow(row)
+                return prev
+            }, ret)
+            return ret
+        } else {
+            const ret = this.fields.reduce((prev, current, i)=>{
+                if(current instanceof Column){
+                    prev[current.options.label ?? current.name] = row[current.options.label ?? current.tag]
+                } else if (current instanceof Query ) {
+
+                }
+                return prev
+            }, {} as {[key:string]: any})
+            return ret
+        }
+        
     }
 
     async execute():Promise<any>{
@@ -254,4 +338,18 @@ export class Condition {
         return `${this.field.q} ${this.condition} $${numberParam}`
     }
 }
-export class Order{}
+export class Order{
+    constructor(private column:Column, private type:"ASC" | "DESC"){}
+
+    getOrder(){
+        return `ORDER BY ${this.column.q} ${this.type}`
+    }
+    static asc(column:Column){
+        return new Order(column, Order.ASC)
+    }
+    static desc(column:Column){
+        return new Order(column, Order.DESC)
+    }
+    public static ASC = "ASC" as const 
+    public static DESC = "DESC" as const
+}
