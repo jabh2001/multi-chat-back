@@ -1,5 +1,4 @@
-import makeWASocket, { DisconnectReason, MessageUpsertType, SocketConfig, proto, useMultiFileAuthState } from "@whiskeysockets/baileys"
-import EventEmitter from "events"
+import makeWASocket, { DisconnectReason, MessageUpsertType, proto, useMultiFileAuthState } from "@whiskeysockets/baileys"
 import { Boom } from "@hapi/boom"
 import pino from "pino"
 import qrcode from "qrcode"
@@ -9,11 +8,12 @@ import { MessageType } from "./schemas"
 import { ContactModel, ConversationModel, InboxModel } from "./models"
 import path from "path"
 import { getClientList, getWss } from "../app"
-import { any, object } from "zod"
+import "./dataBase"
 
 
 const sseClients = getClientList()
 const QR_FOLDER = "./QRs"
+const SESSION_FOLDER = "./sessions"
 
 abstract class Socket {
     folder: string
@@ -68,6 +68,7 @@ class WhatsAppBaileysSocket extends Socket {
                 if (shouldReconnect) {
                     await this.start()
                 } else if( shouldLogout){
+                    console.log("logout")
                     await this.logout()
                 }
             } else if (connection === "open"){
@@ -80,11 +81,12 @@ class WhatsAppBaileysSocket extends Socket {
         
     }
     sentCreds(){
-        sseClients.emitToClients("qr-update", { name:this.folder, user:this.sock.user ?? false, qr:this.getQRBase64() })
+        sseClients.emitToClients("qr-update", { name:this.folder, user:this.sock?.user ?? false, qr:this.getQRBase64() })
     }
 
     async verifyStatus(logout=false){
         try{
+            if(!this.sock.user) return false
             await this.sock.sendPresenceUpdate("available")
             return true
         } catch (e) {
@@ -102,16 +104,20 @@ class WhatsAppBaileysSocket extends Socket {
     async logout() {
         const carpetas = '../../sessions'
         const sesion = this.folder
-        const carpetaSesion = path.join(carpetas, sesion);
+        const carpetaSesion = path.join(SESSION_FOLDER, this.folder);
 
         // Verificar si la carpeta existe
         if (fs.existsSync(carpetaSesion)) {
             // Eliminar la carpeta
+            console.log("logout " + carpetaSesion);
+            this.sock = undefined
             fs.rmdir(carpetaSesion, { recursive: true }, (err) => {
+                console.log("in logout " + carpetaSesion);
                 if (err) {
                     console.error('Error al eliminar la carpeta:', err);
                 } else {
                     console.log('Carpeta eliminada correctamente');
+                    this.start().then(()=>this.sentCreds())
                 }
             });
         }
@@ -171,6 +177,13 @@ class SocketPool {
                 conn.sentCreds()
             })
         }
+        setInterval(()=>{
+            this.pool.forEach(async (v, k)=>{
+                if(v instanceof WhatsAppBaileysSocket){
+                    await v.verifyStatus()
+                }
+            })
+        }, 10000)
     }
 
     static getInstance() {
