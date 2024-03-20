@@ -9,7 +9,7 @@ import qrRouter from './routers/api/qrRouter';
 import listenRouter from './routers/listenRouter';
 import messageWsRouter from './routers/api/messageRouter';
 import { isAuthenticatedMiddleware } from './service/authService';
-SocketPool.getInstance()
+// SocketPool.getInstance()
 
 
 app.use(express.json())

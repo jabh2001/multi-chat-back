@@ -87,10 +87,19 @@ export class Model extends BaseModel {
     repository:BaseRepository
     c:{[key:string]:Column}
     r:{[key:string]:Relation}
+    public _alias?:string
+    get q(){
+        return this.repository.tableName + (this._alias ? ` as "${this.tag}"`: "")
+    }
+    get tag(){
+        return this._alias ?? this.tableName
+    }
 
-    constructor(tableName:string, columns:Column[]=[]){
+    constructor(tableName:string, columns:Column[]=[], _pushPool=true){
         super()
-        Model.modelPool.push(this)
+        if(_pushPool){
+            Model.modelPool.push(this)
+        }
         this.repository = new BaseRepository(tableName)
         this.tableName = tableName
         this.c = {}
@@ -155,6 +164,11 @@ export class Model extends BaseModel {
 
     buildSQL(){
         return `CREATE TABLE IF NOT EXISTS "${this.tableName}" (${ Object.values(this.c).map(c => c.getBuildSQL()).join(",") });`
+    }
+    alias(alias:string){
+        const aliasModal = new Model(this.tableName, Object.values(this.c).map(c => c.deepCopy(this)), false)
+        aliasModal._alias = alias
+        return aliasModal
     }
 }
 

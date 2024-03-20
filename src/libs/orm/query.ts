@@ -1,9 +1,11 @@
+import { number } from "zod"
 import client from "../dataBase"
 import { Column } from "./column"
 import { Model, Relation } from "./model"
+import crypto from "crypto"
 
 type JoinArgs = [Join] | [Relation, Join["type"]]  | [Model, Column, Column] | [Model, Column, Column, Join["type"]]
-type Field = Column | Query
+type Field = Column | Query | RawSQL | Model | Subquery
 
 export class Join{
     private _model:Model
@@ -54,26 +56,21 @@ export class Query {
         this._offset = 0
     }
 
-    get limit(){
-        return  this._limit
-    }
-
-    set limit(limit){
+    limit(limit:number){
         if(limit < 0) throw Error("Limit can't be negative")
         this._limit = limit
+        return this
     }
 
-    get offset(){
-        return  this._offset
-    }
-
-    set offset(offset){
+    offset(offset:number){
         if(offset < 0) throw Error("offset can't be negative")
         this._offset = offset
+        return this
     }
 
     columns(){
         let _fields:Field[] = []
+        let params: any[] = []
         if(this.isAllSelect){
             _fields = [...this.fields]
             if (this.joins.length >0){
@@ -84,16 +81,24 @@ export class Query {
         } else {
             _fields = [...this.fields]
         }
-        const rawFields = _fields.map(field => {
+        const rawFields = _fields.map((field, i) => {
             if(field instanceof Column){
                 const { q, tag } = field
-                return `${q} as ${tag}`
+                return `${q} as "${tag}"`
+            } else if (field instanceof RawSQL){
+                return `${field.raw} as "${field.tag}"`
+            } else if (field instanceof Subquery){
+                const [subquery, subqueryParams] = field.getSQL()
+                params = [ ...params, ...subqueryParams]
+                return subquery
             }
             throw new Error(`Not valid field ${field}`)
         })
         const fields = rawFields.join(',')
-        return fields
+        return [fields, []]
     }
+
+
 
     select(...fields: Field[]){
         this.fields =  fields
@@ -158,32 +163,34 @@ export class Query {
         return this
     }
 
-    getSQL(){
-        const fields = this.columns()
-        const [where, params] = this.where.getWhere()
+    getSQL(initNumber?:number){
+        const [fields, fieldsParams] = this.columns()
+        const [where, params] = this.where.getWhere(initNumber)
         const join = this.joins.map(j => ` ${j.build()} `).join(" ")
         const order = this._order ? this._order.getOrder() :""
-        const limit = this.limit > 0 ? `LIMIT ${this.limit}`: ""
-        const offset = this.offset > 0 ? `OFFSET ${this.offset}`: ""
-
-        let sql = `SELECT ${fields} FROM ${this.model.repository.tableName} ${join} ${where} ${order} ${limit} ${offset}`
-        return [sql, params]
+        const limit = this._limit > 0 ? `LIMIT ${this._limit}`: ""
+        const offset = this._offset > 0 ? `OFFSET ${this._offset}`: ""
+        
+        let sql = `SELECT ${fields} FROM ${this.model.q} ${join} ${where} ${order} ${limit} ${offset}`
+        return [sql, [...fieldsParams, ...params]]
     }
 
     buildObjectFromRow(row:any){
         if(this.isAllSelect){
             const ret = this.model.buildObjectFromRow(row)
             this.joins.reduce((prev:any, current, i)=>{
-                prev[current.model.tableName] = current.model.buildObjectFromRow(row)
+                prev[current.model.tag] = current.model.buildObjectFromRow(row)
                 return prev
             }, ret)
             return ret
         } else {
             const ret = this.fields.reduce((prev, current, i)=>{
                 if(current instanceof Column){
-                    prev[current.options.label ?? current.name] = row[current.options.label ?? current.tag]
-                } else if (current instanceof Query ) {
-
+                    prev[current.options.label ?? current.name] = row[current.tag]
+                } else if (current instanceof Subquery ) {
+                    prev[current.tag] = row[current.tag]
+                } else if( current instanceof RawSQL){
+                    prev[current.tag] = row[current.tag]
                 }
                 return prev
             }, {} as {[key:string]: any})
@@ -211,6 +218,10 @@ export class Query {
         const [sql, params] = this.getSQL()
         const result = await client.query(sql as any, params as any)
         return result.rows.map((r:any) => this.buildObjectFromRow(r)) as any;
+    }
+    subquery(label: string){
+        let q = new Subquery(this, label);
+        return q
     }
 }
 
@@ -311,11 +322,24 @@ export class Delete extends Query {
 export class Where{
     conditionList:Condition[] = []
 
-    getWhere(init:number=0):[string, any[]]{
+    getWhere(init:number=1):[string, any[]]{
         if (this.conditionList.length <= 0) return ['', []]
-        const conditions = this.conditionList.map((c, i) => c.build(String(i+1+init)))
+        let num = init
+        const [conditions, params ] = this.conditionList.reduce((acc, current)=>{
+            const [conditions, params] = acc
+            if(current.value instanceof Column){
+                return [
+                    [...conditions, current.build("")],
+                    params
+                ]
+            }
+            return [
+                [...conditions, current.build(String(num++))],
+                [...params, current.value]
+            ]
+        }, [[], []] as [string[], any[]])
         const condition = conditions.join(" AND ")
-        return [`WHERE ${condition}`, this.conditionList.map(c => c.value)]
+        return [`WHERE ${condition}`, params]
     }
 
     buildObjectFromRow(row:any){
@@ -335,6 +359,9 @@ export class Condition {
     get value() { return this._value}
 
     build(numberParam:string){
+        if(this.value instanceof Column){
+            return `${this.field.q} ${this.condition} ${this.value.q}`
+        }
         return `${this.field.q} ${this.condition} $${numberParam}`
     }
 }
@@ -352,4 +379,40 @@ export class Order{
     }
     public static ASC = "ASC" as const 
     public static DESC = "DESC" as const
+}
+
+export class Subquery{
+    private id:number
+
+    get label(){ return this._label }
+    get query(){ return this._query}
+    get tag(){ return this._label ?? `subquery_${this.id}`}
+
+
+    constructor(private _query:Query, private _label:string){
+        this.id = Math.floor(Math.random() * 10000)
+    }
+
+    getSQL(initNumber? : number): [string , any[]] {
+        const [query, params ] = this.query.getSQL(initNumber)
+        return [`(${query}) as "${this.tag}"`, params as any]
+    }
+}
+
+export class RawSQL {
+    private id:number
+    private _label?:string
+
+    get raw(){ return this._sql }
+    get tag(){ return this._label ?? `raw_${this.id}` }
+
+    constructor(private _sql:string){
+        this.id = Math.floor(Math.random() * 10000)
+    }
+
+    label(label:string){
+        this._label = label
+        return this
+    }
+
 }

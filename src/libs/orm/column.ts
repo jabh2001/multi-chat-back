@@ -34,12 +34,12 @@ export class Column {
     get tag(){
         if(!this.model) return ""
         if(this.options.label) return `"${this.options.label}"`
-        const tableName = this.model.tableName
+        const tableName = this.model.tag
         return `${tableName}_${this.name}`
     }
     get q(){
         if(!this.model) return ""
-        const tableName = this.model.tableName
+        const tableName = this.model.tag
         return `"${tableName}"."${this.name}"`
     }
     
@@ -86,6 +86,11 @@ export class Column {
     }
     desc(){
         return Order.desc(this)
+    }
+    deepCopy(model:Model){
+        const col = new Column(this.name, this.type, this.length, {...this.options})
+        col.model = model;
+        return col
     }
 }
 
