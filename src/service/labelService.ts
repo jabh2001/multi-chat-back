@@ -26,7 +26,7 @@ export const updateLabel:UpdateLabelType = async (id, newLabel) => {
 }
 export const deleteLabel:DeleteLabelType = async (id) => {
     const label = await LabelModel.delete.filter(LabelModel.c.id.equalTo(id)).fetchOneQuery<LabelType>()
-    sseClients.emitToClients('delete-label', [label.id])
+    sseClients.emitToClients('delete-label', [id])
     return label
 }
 

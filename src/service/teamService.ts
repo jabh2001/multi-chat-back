@@ -27,7 +27,7 @@ export const updateTeam:UpdateTeamType = async (id, newTeam) => {
 
 export const deleteTeam:DeleteTeamType = async (id) => {
     const team = await TeamModel.delete.filter(TeamModel.c.id.equalTo(id)).fetchOneQuery<TeamType>()
-    sseClients.emitToClients("delete-team", [team.id])
+    sseClients.emitToClients("delete-team", [id])
     return team
 }
 

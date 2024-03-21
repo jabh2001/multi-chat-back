@@ -125,11 +125,13 @@ export class Query {
         }
         return this
     }
-    order(criteria:Column | Order){
+    order(criteria?:Column | Order){
         if(criteria instanceof Column){
             this._order = Order.asc(criteria)
-        } else {
+        } else if(criteria instanceof Order ){
             this._order = criteria
+        } else {
+            this._order = undefined
         }
         return this
     }

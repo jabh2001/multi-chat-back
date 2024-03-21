@@ -1,6 +1,6 @@
 import { getClientList } from "../app";
-import { ContactModel, ConversationModel, InboxModel } from "../libs/models";
-import { Join } from "../libs/orm/query";
+import { ContactModel, ConversationModel, InboxModel, MessageModel } from "../libs/models";
+import { Join, RawSQL } from "../libs/orm/query";
 import { ConversationType } from "../types";
 
 const sseClients = getClientList()
@@ -9,7 +9,21 @@ export async function getConversations(){
     return await ConversationModel.query.join(ConversationModel.r.inbox, Join.INNER).join(ConversationModel.r.sender, Join.INNER).fetchAllQuery()
 }
 export async function getInboxConversations(inboxId:any){
-    return ConversationModel.query.filter(ConversationModel.c.inboxId.equalTo(inboxId)).fetchAllQuery<ConversationType>()
+    const lastMessage = (
+        MessageModel.query.select(MessageModel.c.content)
+        .filter(MessageModel.c.conversationId.equalTo(ConversationModel.c.id))
+        .order(MessageModel.c.createdAt.desc())
+        .limit(1)
+        .subquery("lastMessage")
+    )
+    const messageCount1 = (
+        MessageModel.query.select(new RawSQL("count(*)").label("messageCount"))
+        .filter(MessageModel.c.conversationId.equalTo(ConversationModel.c.id))
+        .order()
+        .subquery("messageCount")
+    )
+    const messageCount = new RawSQL(`(SELECT count(*) FROM ${MessageModel.q} WHERE ${MessageModel.c.conversationId.q} =${ConversationModel.c.id.q} AND ${MessageModel.c.status.q} = false)`).label("messageCount")
+    return await ConversationModel.query.select(...Object.values(ConversationModel.c), lastMessage, messageCount).filter(ConversationModel.c.inboxId.equalTo(inboxId)).fetchAllQuery<ConversationType>()
 }
 
 export async function saveNewConversation(conversation:Omit<ConversationType, "id">){
