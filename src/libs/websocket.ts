@@ -5,6 +5,7 @@ export default class WS {
 
     static async incomingMessage(data: any, rq: any,) {
         let message: MessageType = {
+            whatsappId:'',
             content: data.text,
             contentType: 'text',
             conversationId: data.conversation.id,
@@ -22,6 +23,7 @@ export default class WS {
         const conversationId = data.conversationId
         const messageType = data.messageType
         let message: MessageType = {
+            whatsappId:'',
             id: 0,
             conversationId: conversationId,
             contentType: 'text',
@@ -32,13 +34,11 @@ export default class WS {
         }
         const wsMessage = await baileys?.sendMessage(sender.phoneNumber.split('+')[1], message)
 
-        message.whatsapp_id = wsMessage.key.id
+        message.whatsappId = wsMessage.key.id
         const result = await saveNewMessageInConversation(rq.params.id, message)
         return result
     }
     static async outgoingMessageFromWS(data: any, rq:any) {
-        console.log('este es la data', data)
-        
         const conversationId = data.conversation.id
         let message: MessageType = {
             id: 0,
@@ -47,7 +47,7 @@ export default class WS {
             content: data.text,
             private: true,
             messageType: "outgoing",
-            whatsapp_id: data.messageID
+            whatsappId: data.messageID
         }
         const result = await saveNewMessageInConversation(rq.params.id, message)
         return JSON.stringify(result)

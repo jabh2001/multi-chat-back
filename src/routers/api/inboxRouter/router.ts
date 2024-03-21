@@ -114,7 +114,11 @@ inboxRouter.route("/:id/conversation/:conversationId/message").all(getInboxMiddl
     })
     .post(async (req, res) => {
         try {
-            res.json({ message: await saveNewMessageInConversation(req.params.conversationId, { ...req.body }) })
+            // const message = await saveNewMessageInConversation(req.params.conversationId, { ...req.body }) 
+            // if(!message){
+            //     res.json({})
+            // }
+            res.json({ })
         } catch (e: any) {
             return errorResponse(res, e)
         }

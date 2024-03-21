@@ -43,7 +43,7 @@ abstract class Socket {
     }
 
     constructor(folder: string) {
-        this.folder = folder
+        this.folder = folder    
     }
     abstract sendMessage(phone: string, message: MessageType): void
 }
