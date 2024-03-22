@@ -44,9 +44,10 @@ export const inboxSchema = z.object({
 
 export const messageSchema = z.object({
     id:z.number().positive(),
+    buffer:z.string().optional(),
     conversationId:z.number().positive(),
     senderId:z.number().positive().optional(),
-    content:z.string(),
+    content:z.string().optional(),
     whatsappId:z.string(),
     status:z.boolean().optional(),
     contentType:z.string(),

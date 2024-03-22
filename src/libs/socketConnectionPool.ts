@@ -1,4 +1,4 @@
-import makeWASocket, { DisconnectReason, MessageUpsertType, proto, useMultiFileAuthState } from "@whiskeysockets/baileys"
+import makeWASocket, { DisconnectReason, MessageUpsertType, downloadMediaMessage, proto, useMultiFileAuthState } from "@whiskeysockets/baileys"
 import { Boom } from "@hapi/boom"
 import pino from "pino"
 import qrcode from "qrcode"
@@ -43,7 +43,7 @@ abstract class Socket {
     }
 
     constructor(folder: string) {
-        this.folder = folder    
+        this.folder = folder
     }
     abstract sendMessage(phone: string, message: MessageType): void
 }
@@ -67,31 +67,31 @@ class WhatsAppBaileysSocket extends Socket {
 
                 if (shouldReconnect) {
                     await this.start()
-                } else if( shouldLogout){
+                } else if (shouldLogout) {
                     console.log("logout")
                     await this.logout()
                 }
-            } else if (connection === "open"){
+            } else if (connection === "open") {
                 this.sentCreds()
             }
         })
-        sock.ev.on("creds.update", async () => await Promise.all([ saveCreds(), this.sentCreds() ]) )
+        sock.ev.on("creds.update", async () => await Promise.all([saveCreds(), this.sentCreds()]))
         sock.ev.on("messages.upsert", evt => this.messageUpsert(evt))
         this.sock = sock
-        
+
     }
-    sentCreds(){
-        sseClients.emitToClients("qr-update", { name:this.folder, user:this.sock?.user ?? false, qr:this.getQRBase64() })
+    sentCreds() {
+        sseClients.emitToClients("qr-update", { name: this.folder, user: this.sock?.user ?? false, qr: this.getQRBase64() })
     }
 
-    async verifyStatus(logout=false){
-        try{
-            if(!this.sock.user) return false
+    async verifyStatus(logout = false) {
+        try {
+            if (!this.sock.user) return false
             await this.sock.sendPresenceUpdate("available")
             return true
         } catch (e) {
-            if(e instanceof Boom && e.output.statusCode == DisconnectReason.connectionClosed){
-                if(logout){
+            if (e instanceof Boom && e.output.statusCode == DisconnectReason.connectionClosed) {
+                if (logout) {
                     await this.logout()
                 }
                 return false
@@ -102,8 +102,6 @@ class WhatsAppBaileysSocket extends Socket {
         }
     }
     async logout() {
-        const carpetas = '../../sessions'
-        const sesion = this.folder
         const carpetaSesion = path.join(SESSION_FOLDER, this.folder);
 
         // Verificar si la carpeta existe
@@ -117,7 +115,7 @@ class WhatsAppBaileysSocket extends Socket {
                     console.error('Error al eliminar la carpeta:', err);
                 } else {
                     console.log('Carpeta eliminada correctamente');
-                    this.start().then(()=>this.sentCreds())
+                    this.start().then(() => this.sentCreds())
                 }
             });
         }
@@ -126,7 +124,29 @@ class WhatsAppBaileysSocket extends Socket {
 
     async messageUpsert({ messages, type }: { messages: proto.IWebMessageInfo[], type: MessageUpsertType }) {
         const wss = getWss()
+        const MEDIAMESSAGE =['audioMessage','imageMessage']
         messages.forEach(async (m) => {
+            if (!m.message) return
+            console.log( m)
+            let base64Buffer = null
+            if ( MEDIAMESSAGE.includes(Object.keys(m.message)[0])) {
+                try {
+                    const buffer = await downloadMediaMessage(
+                        m,
+                        'buffer',
+                        {},
+                        {
+                            logger: this.sock.logger,
+                            reuploadRequest: this.sock.updateMediaMessage
+                        }
+                    );
+                    base64Buffer = buffer.toString('base64');
+                    console.log(base64Buffer)
+                } catch (error) {
+                    console.error('Error al descargar el medio:', error);
+                }
+            }
+        
             const phoneNumber = '+' + m.key.remoteJid?.split('@')[0]
             const text = m.message?.conversation || m.message?.extendedTextMessage?.text
             const joinResult = await ContactModel.query.join(
@@ -140,7 +160,7 @@ class WhatsAppBaileysSocket extends Socket {
 
             if (result) {
                 for (const ws of wss.clients) {
-                    ws.emit('message-upsert' + conversationID, { ...result, text, fromMe, messageID:m.key.id });
+                    ws.emit('message-upsert' + conversationID, { ...result, text, fromMe, messageID: m.key.id, base64Buffer });
                 }
             }
 
@@ -173,13 +193,13 @@ class SocketPool {
         for (const inbox of inboxes) {
             const conn = this.createBaileysConnection(inbox.name)
             const watch = fs.watch(conn.qr_folder)
-            watch.on("change", ()=>{
+            watch.on("change", () => {
                 conn.sentCreds()
             })
         }
-        setInterval(()=>{
-            this.pool.forEach(async (v, k)=>{
-                if(v instanceof WhatsAppBaileysSocket){
+        setInterval(() => {
+            this.pool.forEach(async (v, k) => {
+                if (v instanceof WhatsAppBaileysSocket) {
                     await v.verifyStatus()
                 }
             })

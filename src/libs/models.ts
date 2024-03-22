@@ -89,6 +89,7 @@ const MessageModel = (
         new IntColumn("conversationId", 0, { foreign:ConversationModel.c.id, nullable:false }),
         new IntColumn("senderId", 0, { foreign:UserModel.c.id, nullable:true }),
         new StringColumn('whatsappId'),
+        new StringColumn('buffer'),
         new BooleanColumn('status',true),
         new StringColumn("content"),
         new StringColumn("contentType", 50),
