@@ -19,6 +19,7 @@ export type MultiChatEventMap = {
     "insert-conversation":ConversationType,
     "update-conversation":Partial<ConversationType>,
     "delete-conversation":ConversationType["id"][],
+    "update-conversation-last-message":{ conversationId:ConversationType["id"], lastMessage:string, lastMessageDate:string},
     "qr-update":{name:string, user:any | false, qr:string},
     "close":undefined,
 } & { 

@@ -91,6 +91,8 @@ export class Query {
                 const [subquery, subqueryParams] = field.getSQL()
                 params = [ ...params, ...subqueryParams]
                 return subquery
+            } else if ( field instanceof Model){
+                return Object.values(field.c).map(({ q, tag })=>`${q} as "${tag}"`).join(', ')
             }
             throw new Error(`Not valid field ${field}`)
         })
@@ -103,6 +105,11 @@ export class Query {
     select(...fields: Field[]){
         this.fields =  fields
         this.isAllSelect = false
+        return this
+    }
+
+    appendFields(...fields:Field[]){
+        this.fields = [...this.fields, ...fields]
         return this
     }
 
@@ -193,6 +200,8 @@ export class Query {
                     prev[current.tag] = row[current.tag]
                 } else if( current instanceof RawSQL){
                     prev[current.tag] = row[current.tag]
+                } else if( current instanceof Model){
+                    prev[current.tag] = current.buildObjectFromRow(row)
                 }
                 return prev
             }, {} as {[key:string]: any})

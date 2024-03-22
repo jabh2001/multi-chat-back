@@ -47,7 +47,7 @@ export const messageSchema = z.object({
     conversationId:z.number().positive(),
     senderId:z.number().positive().optional(),
     content:z.string(),
-    whatsapp_id:z.string().optional(),
+    whatsappId:z.string(),
     status:z.boolean().optional(),
     contentType:z.string(),
     messageType:z.enum(["incoming", "outgoing"]),

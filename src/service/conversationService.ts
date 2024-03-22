@@ -6,7 +6,23 @@ import { ConversationType } from "../types";
 const sseClients = getClientList()
 
 export async function getConversations(){
-    return await ConversationModel.query.join(ConversationModel.r.inbox, Join.INNER).join(ConversationModel.r.sender, Join.INNER).fetchAllQuery()
+    const lastMessage = (
+        MessageModel.query.select(MessageModel.c.content)
+        .filter(MessageModel.c.conversationId.equalTo(ConversationModel.c.id))
+        .order(MessageModel.c.createdAt.desc())
+        .limit(1)
+        .subquery("lastMessage")
+    )
+    const lastMessageDate = (
+        MessageModel.query.select(MessageModel.c.createdAt)
+        .filter(MessageModel.c.conversationId.equalTo(ConversationModel.c.id))
+        .order(MessageModel.c.createdAt.desc())
+        .limit(1)
+        .subquery("lastMessageDate")
+    )
+    const messageCount = new RawSQL(`(SELECT count(*) FROM ${MessageModel.q} WHERE ${MessageModel.c.conversationId.q} =${ConversationModel.c.id.q} AND ${MessageModel.c.status.q} = false)`).label("messageCount")
+
+    return await ConversationModel.query.select(ConversationModel, InboxModel, ContactModel, lastMessage, lastMessageDate, messageCount).join(ConversationModel.r.inbox, Join.INNER).join(ConversationModel.r.sender, Join.INNER).fetchAllQuery()
 }
 export async function getInboxConversations(inboxId:any){
     const lastMessage = (

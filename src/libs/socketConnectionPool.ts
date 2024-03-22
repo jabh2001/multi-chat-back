@@ -1,19 +1,22 @@
-import makeWASocket, { DisconnectReason, MessageUpsertType, SocketConfig, proto, useMultiFileAuthState } from "@whiskeysockets/baileys"
-import EventEmitter from "events"
+import makeWASocket, { DisconnectReason, MessageUpsertType, proto, useMultiFileAuthState } from "@whiskeysockets/baileys"
 import { Boom } from "@hapi/boom"
 import pino from "pino"
 import qrcode from "qrcode"
 import fs from "fs"
-import { InboxType } from "../types"
+import { ContactType, ConversationType, InboxType } from "../types"
 import { MessageType } from "./schemas"
 import { ContactModel, ConversationModel, InboxModel } from "./models"
 import path from "path"
 import { getClientList, getWss } from "../app"
-import { any, object } from "zod"
+import "./dataBase"
+import WS from "./websocket"
+import { getMessageByWhatsAppId } from "../service/messageService"
+import { Join } from "./orm/query"
 
 
 const sseClients = getClientList()
 const QR_FOLDER = "./QRs"
+const SESSION_FOLDER = "./sessions"
 
 abstract class Socket {
     folder: string
@@ -43,7 +46,7 @@ abstract class Socket {
     }
 
     constructor(folder: string) {
-        this.folder = folder
+        this.folder = folder    
     }
     abstract sendMessage(phone: string, message: MessageType): void
 }
@@ -68,6 +71,7 @@ class WhatsAppBaileysSocket extends Socket {
                 if (shouldReconnect) {
                     await this.start()
                 } else if( shouldLogout){
+                    console.log("logout")
                     await this.logout()
                 }
             } else if (connection === "open"){
@@ -80,11 +84,12 @@ class WhatsAppBaileysSocket extends Socket {
         
     }
     sentCreds(){
-        sseClients.emitToClients("qr-update", { name:this.folder, user:this.sock.user ?? false, qr:this.getQRBase64() })
+        sseClients.emitToClients("qr-update", { name:this.folder, user:this.sock?.user ?? false, qr:this.getQRBase64() })
     }
 
     async verifyStatus(logout=false){
         try{
+            if(!this.sock.user) return false
             await this.sock.sendPresenceUpdate("available")
             return true
         } catch (e) {
@@ -99,39 +104,67 @@ class WhatsAppBaileysSocket extends Socket {
             }
         }
     }
-    async logout(){
-        this.sock.authState.creds = {
-            ...this.sock.authState.creds,
-            account: undefined, 
-            me: undefined, 
-            signalIdentities: undefined, 
-            platform: undefined, 
-            lastAccountSyncTimestamp: undefined, 
-            myAppStateKeyId: undefined, 
+    async logout() {
+        const carpetaSesion = path.join(SESSION_FOLDER, this.folder);
+
+        // Verificar si la carpeta existe
+        if (fs.existsSync(carpetaSesion)) {
+            // Eliminar la carpeta
+            console.log("logout " + carpetaSesion);
+            this.sock = undefined
+            fs.rmdir(carpetaSesion, { recursive: true }, (err) => {
+                console.log("in logout " + carpetaSesion);
+                if (err) {
+                    console.error('Error al eliminar la carpeta:', err);
+                } else {
+                    console.log('Carpeta eliminada correctamente');
+                    this.start().then(()=>this.sentCreds()).then(()=>this.sock?.ev?.flush())
+                }
+            });
         }
-        this.sock.ev.emit("creds.update", this.sock.authState.creds)
-        this.sentCreds()
-        await this.start()
     }
+
 
     async messageUpsert({ messages, type }: { messages: proto.IWebMessageInfo[], type: MessageUpsertType }) {
         const wss = getWss()
         messages.forEach(async (m) => {
             const phoneNumber = '+' + m.key.remoteJid?.split('@')[0]
             const text = m.message?.conversation || m.message?.extendedTextMessage?.text
-            const joinResult = await ContactModel.query.join(
-                ConversationModel,
-                ConversationModel.c.senderId,
-                ContactModel.c.id
-            ).fetchAllQuery()
-            const result: any = joinResult.find((obj: any) => obj.phoneNumber === phoneNumber)
-            const conversationID = result?.conversation.id
+            const joinResult = (
+                await ContactModel.query
+                .join( ContactModel.r.conversations, Join.INNER)
+                .join( InboxModel, ConversationModel.c.inboxId, InboxModel.c.id)
+                .filter(ContactModel.c.phoneNumber.equalTo(phoneNumber), InboxModel.c.name.equalTo(this.folder))
+                .fetchAllQuery<ContactType & { conversation:ConversationType, inbox:InboxType}>()
+            )
+            if(joinResult.length == 0){
+                return
+            }
+            const result  = joinResult[0];
+            const conversationID = result.conversation.id
             const fromMe = m.key.fromMe === true;
-
-            if (result) {
-                for (const ws of wss.clients) {
-                    ws.emit('message-upsert' + conversationID, { ...result, text, fromMe, messageID:m.key.id });
+            if (result && m.key.id) {
+                const data = { ...result, text, fromMe, messageID:m.key.id }
+                let message
+                if(fromMe){
+                    console.log("Hola")
+                    const res = await getMessageByWhatsAppId(m.key.id)
+                    console.log(res, res.length)
+                    if(res.length == 0){
+                        console.log("Hola2")
+                        message = await WS.outgoingMessageFromWS(data)
+                    }
+                }else{
+                    message = await WS.incomingMessage(data)
+                }    
+                if(message){
+                    for (const ws of wss.clients) {
+                        ws.emit('message-upsert' + conversationID, message);
+                    }
                 }
+            } else {
+                
+            console.log(result, m.key.id)
             }
 
         })
@@ -148,7 +181,6 @@ class WhatsAppBaileysSocket extends Socket {
 
 
 }
-
 class SocketPool {
     private static instance: SocketPool
     private pool: Map<string, any> = new Map()
@@ -167,6 +199,13 @@ class SocketPool {
                 conn.sentCreds()
             })
         }
+        setInterval(()=>{
+            this.pool.forEach(async (v, k)=>{
+                if(v instanceof WhatsAppBaileysSocket){
+                    await v.verifyStatus()
+                }
+            })
+        }, 10000)
     }
 
     static getInstance() {

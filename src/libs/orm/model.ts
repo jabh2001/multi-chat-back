@@ -156,7 +156,8 @@ export class Model extends BaseModel {
         }, {})  
         fields.reduce((prev:any, current, i)=>{
             const key = current.slice(this.tableName.length +1)
-            prev[columnsName[key]] = row[current]
+            prev[key] = row[current]
+
             return prev
         }, obj)
         return obj
@@ -189,7 +190,7 @@ export class Relation {
         this.modelB = foreign.model
     }
 
-    getJoin(main:"modelA" | "modelB" | Model){
+    getJoin(main:"modelA" | "modelB" | Model = "modelA"){
         let mainM:Model
         if(main instanceof Model){
             if(main === this.columnA.model){

@@ -16,7 +16,7 @@ export class ServerSentEventList extends EventEmitter{
         }
     }
 
-    emitToClients<EventName extends MultiChatEventName>(event:EventName, args:MultiChatEventMap[EventName]){
+    emitToClients<EventName extends MultiChatEventName>(event:EventName, args?:MultiChatEventMap[EventName]){
         for (const client of this.clients) {
             client.emit(event, args);
         }

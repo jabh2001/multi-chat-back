@@ -23,7 +23,7 @@ const client = new Client(dbConfig);
 client.connect()
   .then(async () => {
     try {
-      const query = Model.modelPool.map(m => m.buildSQL()).join("")
+      const query = Model.modelPool.map(m => m.buildSQL()).join(";")
       await client.query(query);
       const result = await client.query(`SELECT * FROM public."user" where email = 'admin@admin.com' limit 1;`);
       if(!result.rowCount){
