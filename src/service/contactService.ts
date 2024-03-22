@@ -33,7 +33,7 @@ export const updateContact:UpdateContactType = async (contact, newContact) => {
 }
 export const deleteContact:DeleteContactType = async (contact) => {
     const contact_ = await ContactModel.delete.filter(ContactModel.c.id.equalTo(contact.id)).fetchOneQuery<ContactType>()
-    sseClients.emitToClients("delete-contact", [contact_.id])
+    sseClients.emitToClients("delete-contact", [contact.id])
     return contact_
 }
 

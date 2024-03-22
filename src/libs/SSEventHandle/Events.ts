@@ -19,7 +19,13 @@ export type MultiChatEventMap = {
     "insert-conversation":ConversationType,
     "update-conversation":Partial<ConversationType>,
     "delete-conversation":ConversationType["id"][],
+    "update-conversation-last-message":{ conversationId:ConversationType["id"], lastMessage:string, lastMessageDate:string},
     "qr-update":{name:string, user:any | false, qr:string},
-    "close":undefined, // When the app is closed.
-}
+    "close":undefined,
+} & { 
+    [key in `qr-${number}` | `qr-update-${number}`]: {name:string, user:any | false, qr:string};
+}& { 
+    [key in `qr-${string}-${boolean}`]: {};
+};
+
 export type MultiChatEventName=keyof MultiChatEventMap

@@ -50,9 +50,16 @@ export type ConversationType = {
 export type MessageType = {
     id: number,
     content:string
-    content_type:"text"
-    message_type:"incoming" | "outgoing"
+    contentType:"text"
+    messageType:"incoming" | "outgoing"
     private:boolean
-    created_at:Date
+    createdAt:Date
     user?:UserType
+}
+
+export type WSMessageUpsertType = ContactType & { 
+    conversation:ConversationType
+    text:string | null | undefined 
+    fromMe:boolean
+    messageID:string
 }

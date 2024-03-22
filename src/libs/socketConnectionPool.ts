@@ -3,12 +3,15 @@ import { Boom } from "@hapi/boom"
 import pino from "pino"
 import qrcode from "qrcode"
 import fs from "fs"
-import { InboxType } from "../types"
+import { ContactType, ConversationType, InboxType } from "../types"
 import { MessageType } from "./schemas"
 import { ContactModel, ConversationModel, InboxModel } from "./models"
 import path from "path"
 import { getClientList, getWss } from "../app"
 import "./dataBase"
+import WS from "./websocket"
+import { getMessageByWhatsAppId } from "../service/messageService"
+import { Join } from "./orm/query"
 
 
 const sseClients = getClientList()
@@ -115,7 +118,9 @@ class WhatsAppBaileysSocket extends Socket {
                     console.error('Error al eliminar la carpeta:', err);
                 } else {
                     console.log('Carpeta eliminada correctamente');
-                    this.start().then(() => this.sentCreds())
+
+                    this.start().then(()=>this.sentCreds()).then(()=>this.sock?.ev?.flush())
+
                 }
             });
         }
@@ -149,22 +154,49 @@ class WhatsAppBaileysSocket extends Socket {
         
             const phoneNumber = '+' + m.key.remoteJid?.split('@')[0]
             const text = m.message?.conversation || m.message?.extendedTextMessage?.text
-            const joinResult = await ContactModel.query.join(
-                ConversationModel,
-                ConversationModel.c.senderId,
-                ContactModel.c.id
-            ).fetchAllQuery()
-            const result: any = joinResult.find((obj: any) => obj.phoneNumber === phoneNumber)
-            const conversationID = result?.conversation.id
+            const joinResult = (
+                await ContactModel.query
+                .join( ContactModel.r.conversations, Join.INNER)
+                .join( InboxModel, ConversationModel.c.inboxId, InboxModel.c.id)
+                .filter(ContactModel.c.phoneNumber.equalTo(phoneNumber), InboxModel.c.name.equalTo(this.folder))
+                .fetchAllQuery<ContactType & { conversation:ConversationType, inbox:InboxType}>()
+            )
+            if(joinResult.length == 0){
+                return
+            }
+            const result  = joinResult[0];
+            const conversationID = result.conversation.id
             const fromMe = m.key.fromMe === true;
 
             if (result) {
                 for (const ws of wss.clients) {
                     ws.emit('message-upsert' + conversationID, { ...result, text, fromMe, messageID: m.key.id, base64Buffer });
                 }
+            if (result && m.key.id) {
+                const data = { ...result, text, fromMe, messageID:m.key.id }
+                let message
+                if(fromMe){
+                    console.log("Hola")
+                    const res = await getMessageByWhatsAppId(m.key.id)
+                    console.log(res, res.length)
+                    if(res.length == 0){
+                        console.log("Hola2")
+                        message = await WS.outgoingMessageFromWS(data)
+                    }
+                }else{
+                    message = await WS.incomingMessage(data)
+                }    
+                if(message){
+                    for (const ws of wss.clients) {
+                        ws.emit('message-upsert' + conversationID, message);
+                    }
+                }
+            } else {
+                
+            console.log(result, m.key.id)
             }
 
-        })
+     } })
 
     }
 
@@ -178,7 +210,6 @@ class WhatsAppBaileysSocket extends Socket {
 
 
 }
-
 class SocketPool {
     private static instance: SocketPool
     private pool: Map<string, any> = new Map()

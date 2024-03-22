@@ -87,10 +87,19 @@ export class Model extends BaseModel {
     repository:BaseRepository
     c:{[key:string]:Column}
     r:{[key:string]:Relation}
+    public _alias?:string
+    get q(){
+        return this.repository.tableName + (this._alias ? ` as "${this.tag}"`: "")
+    }
+    get tag(){
+        return this._alias ?? this.tableName
+    }
 
-    constructor(tableName:string, columns:Column[]=[]){
+    constructor(tableName:string, columns:Column[]=[], _pushPool=true){
         super()
-        Model.modelPool.push(this)
+        if(_pushPool){
+            Model.modelPool.push(this)
+        }
         this.repository = new BaseRepository(tableName)
         this.tableName = tableName
         this.c = {}
@@ -147,7 +156,8 @@ export class Model extends BaseModel {
         }, {})  
         fields.reduce((prev:any, current, i)=>{
             const key = current.slice(this.tableName.length +1)
-            prev[columnsName[key]] = row[current]
+            prev[key] = row[current]
+
             return prev
         }, obj)
         return obj
@@ -155,6 +165,11 @@ export class Model extends BaseModel {
 
     buildSQL(){
         return `CREATE TABLE IF NOT EXISTS "${this.tableName}" (${ Object.values(this.c).map(c => c.getBuildSQL()).join(",") });`
+    }
+    alias(alias:string){
+        const aliasModal = new Model(this.tableName, Object.values(this.c).map(c => c.deepCopy(this)), false)
+        aliasModal._alias = alias
+        return aliasModal
     }
 }
 
@@ -175,7 +190,7 @@ export class Relation {
         this.modelB = foreign.model
     }
 
-    getJoin(main:"modelA" | "modelB" | Model){
+    getJoin(main:"modelA" | "modelB" | Model = "modelA"){
         let mainM:Model
         if(main instanceof Model){
             if(main === this.columnA.model){

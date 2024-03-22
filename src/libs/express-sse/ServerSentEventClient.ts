@@ -44,7 +44,7 @@ export class ServerSentEventClient extends EventEmitter {
         this.send(eventName, JSON.stringify(arg))
         return super.emit(eventName, arg);
     }
-    on<EventName extends MultiChatEventName>(eventName: EventName, listener: (arg: MultiChatEventMap[EventName]) => void): this {
+    on<EventName extends MultiChatEventName>(eventName: EventName, listener: (args: MultiChatEventMap[EventName]) => void): this {
         return super.on(eventName, listener);
     }
 }
