@@ -175,7 +175,7 @@ export class Relation {
         this.modelB = foreign.model
     }
 
-    getJoin(main:"modelA" | "modelB" | Model){
+    getJoin(main:"modelA" | "modelB" | Model = "modelA"){
         let mainM:Model
         if(main instanceof Model){
             if(main === this.columnA.model){

@@ -56,3 +56,10 @@ export type MessageType = {
     created_at:Date
     user?:UserType
 }
+
+export type WSMessageUpsertType = ContactType & { 
+    conversation:ConversationType
+    text:string | null | undefined 
+    fromMe:boolean
+    messageID:string
+}

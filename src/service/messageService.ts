@@ -10,3 +10,7 @@ export async function saveNewMessageInConversation(conversationId:any, message:a
     const newData = messageSchema.omit({ id:true, conversationId:true }).parse(message)
     return await MessageModel.insert.value({ ...newData, conversationId }).fetchOneQuery<MessageType>()
 }
+
+export async function getMessageByWhatsAppId(whatsAppId:string) {
+    return await MessageModel.query.filter(MessageModel.c.whatsappId.equalTo(whatsAppId)).fetchAllQuery()
+}
