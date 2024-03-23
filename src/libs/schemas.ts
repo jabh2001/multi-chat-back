@@ -45,6 +45,7 @@ export const inboxSchema = z.object({
 export const messageSchema = z.object({
     id:z.number().positive(),
     buffer:z.string().optional(),
+    bufferType:z.string().optional(),
     conversationId:z.number().positive(),
     senderId:z.number().positive().optional(),
     content:z.string().optional(),

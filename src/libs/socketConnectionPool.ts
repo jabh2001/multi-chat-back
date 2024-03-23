@@ -3,7 +3,7 @@ import { Boom } from "@hapi/boom"
 import pino from "pino"
 import qrcode from "qrcode"
 import fs from "fs"
-import { ContactType, ConversationType, InboxType } from "../types"
+import { ContactType, ConversationType, InboxType, Base64Buffer } from "../types"
 import { MessageType } from "./schemas"
 import { ContactModel, ConversationModel, InboxModel } from "./models"
 import path from "path"
@@ -119,7 +119,7 @@ class WhatsAppBaileysSocket extends Socket {
                 } else {
                     console.log('Carpeta eliminada correctamente');
 
-                    this.start().then(()=>this.sentCreds()).then(()=>this.sock?.ev?.flush())
+                    this.start().then(() => this.sentCreds()).then(() => this.sock?.ev?.flush())
 
                 }
             });
@@ -129,12 +129,12 @@ class WhatsAppBaileysSocket extends Socket {
 
     async messageUpsert({ messages, type }: { messages: proto.IWebMessageInfo[], type: MessageUpsertType }) {
         const wss = getWss()
-        const MEDIAMESSAGE =['audioMessage','imageMessage']
+        const MEDIAMESSAGE = ['audioMessage', 'imageMessage', 'videoMessage', 'documentMessage']
         messages.forEach(async (m) => {
             if (!m.message) return
-            console.log( m)
-            let base64Buffer = null
-            if ( MEDIAMESSAGE.includes(Object.keys(m.message)[0])) {
+            console.log(m.message)
+            let base64Buffer: null | Base64Buffer = null
+            if (MEDIAMESSAGE.includes(Object.keys(m.message)[0])) {
                 try {
                     const buffer = await downloadMediaMessage(
                         m,
@@ -145,58 +145,60 @@ class WhatsAppBaileysSocket extends Socket {
                             reuploadRequest: this.sock.updateMediaMessage
                         }
                     );
-                    base64Buffer = buffer.toString('base64');
+                    base64Buffer = {
+                        base64: buffer.toString('base64'),
+                        tipo: Object.keys(m.message)[0]
+                    }
                     console.log(base64Buffer)
                 } catch (error) {
                     console.error('Error al descargar el medio:', error);
                 }
             }
-        
+
             const phoneNumber = '+' + m.key.remoteJid?.split('@')[0]
             const text = m.message?.conversation || m.message?.extendedTextMessage?.text
             const joinResult = (
                 await ContactModel.query
-                .join( ContactModel.r.conversations, Join.INNER)
-                .join( InboxModel, ConversationModel.c.inboxId, InboxModel.c.id)
-                .filter(ContactModel.c.phoneNumber.equalTo(phoneNumber), InboxModel.c.name.equalTo(this.folder))
-                .fetchAllQuery<ContactType & { conversation:ConversationType, inbox:InboxType}>()
+                    .join(ContactModel.r.conversations, Join.INNER)
+                    .join(InboxModel, ConversationModel.c.inboxId, InboxModel.c.id)
+                    .filter(ContactModel.c.phoneNumber.equalTo(phoneNumber), InboxModel.c.name.equalTo(this.folder))
+                    .fetchAllQuery<ContactType & { conversation: ConversationType, inbox: InboxType }>()
             )
-            if(joinResult.length == 0){
+            if (joinResult.length == 0) {
                 return
             }
-            const result  = joinResult[0];
+            const result = joinResult[0];
             const conversationID = result.conversation.id
             const fromMe = m.key.fromMe === true;
 
-            if (result) {
-                for (const ws of wss.clients) {
-                    ws.emit('message-upsert' + conversationID, { ...result, text, fromMe, messageID: m.key.id, base64Buffer });
-                }
+            // if (result) {
+            //     for (const ws of wss.clients) {
+            //         ws.emit('message-upsert' + conversationID, { ...result, text, fromMe, messageID: m.key.id, base64Buffer });
+            //    }}
             if (result && m.key.id) {
-                const data = { ...result, text, fromMe, messageID:m.key.id }
+                
+                const data = { ...result, text, fromMe, messageID: m.key.id, base64Buffer }
                 let message
-                if(fromMe){
-                    console.log("Hola")
+                if (fromMe) {
                     const res = await getMessageByWhatsAppId(m.key.id)
                     console.log(res, res.length)
-                    if(res.length == 0){
-                        console.log("Hola2")
+                    if (res.length == 0) {
                         message = await WS.outgoingMessageFromWS(data)
                     }
-                }else{
+                } else {
                     message = await WS.incomingMessage(data)
-                }    
-                if(message){
+                }
+                if (message) {
                     for (const ws of wss.clients) {
                         ws.emit('message-upsert' + conversationID, message);
                     }
                 }
             } else {
-                
-            console.log(result, m.key.id)
+
+                console.log(result, m.key.id)
             }
 
-     } })
+        })
 
     }
 

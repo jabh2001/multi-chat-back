@@ -58,8 +58,14 @@ export type MessageType = {
 }
 
 export type WSMessageUpsertType = ContactType & { 
+    base64Buffer:Base64Buffer|null
     conversation:ConversationType
     text:string | null | undefined 
     fromMe:boolean
     messageID:string
+}
+
+export type Base64Buffer= {
+    base64:string |null,
+    tipo:string|null
 }
