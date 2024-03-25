@@ -52,7 +52,6 @@ export default class WS {
             messageType: "outgoing",
             whatsappId: data.messageID,
             buffer:buffer,
-            bufferType:bufferType
         } 
         const result = await saveNewMessageInConversation(conversationId, message)
         return JSON.stringify(result)
