@@ -132,7 +132,6 @@ class WhatsAppBaileysSocket extends Socket {
         const MEDIAMESSAGE = ['audioMessage', 'imageMessage', 'videoMessage', 'documentMessage']
         messages.forEach(async (m) => {
             if (!m.message) return
-            console.log(m.message)
             let base64Buffer: null | Base64Buffer = null
             if (MEDIAMESSAGE.includes(Object.keys(m.message)[0])) {
                 try {
@@ -149,7 +148,6 @@ class WhatsAppBaileysSocket extends Socket {
                         base64: buffer.toString('base64'),
                         tipo: Object.keys(m.message)[0]
                     }
-                    console.log(base64Buffer)
                 } catch (error) {
                     console.error('Error al descargar el medio:', error);
                 }
@@ -181,7 +179,6 @@ class WhatsAppBaileysSocket extends Socket {
                 let message
                 if (fromMe) {
                     const res = await getMessageByWhatsAppId(m.key.id)
-                    console.log(res, res.length)
                     if (res.length == 0) {
                         message = await WS.outgoingMessageFromWS(data)
                     }
@@ -195,7 +192,6 @@ class WhatsAppBaileysSocket extends Socket {
                 }
             } else {
 
-                console.log(result, m.key.id)
             }
 
         })
