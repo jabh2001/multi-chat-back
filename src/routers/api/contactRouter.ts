@@ -2,6 +2,7 @@ import { NextFunction, Request, Response, Router } from "express"
 import { deleteContact, deleteSocialMedia, getContactById, getContactLabels, getContactSocialMedia, getContacts, saveNewContact, saveNewContactSocialMedia, updateContact, updateContactLabel, updateSocialMedia } from "../../service/contactService"
 import { SocialMediaModel } from "../../libs/models"
 import { errorResponse } from "../../service/errorService"
+import { getContactAvatar } from "../../service/fileService"
 const contactRouter = Router()
 
 const getModelMiddleware = async (req: Request, res: Response, next: NextFunction) => {
@@ -61,7 +62,20 @@ contactRouter.route("/:id")
             return errorResponse(res, e)
         }
     })
-
+contactRouter.get("/:id/avatar", async (req, res)=>{
+    try{
+        var data = await getContactAvatar(req.params.id);
+        var img = Buffer.from(data, 'base64');
+    
+       res.writeHead(200, {
+         'Content-Type': 'image/png',
+         'Content-Length': img.length
+       });
+       res.end(img); 
+    } catch (e){
+        res.status(404).send("Image not found")
+    }
+})
 contactRouter.route("/:id/labels")
     .get(async (req, res) => {
         try {
