@@ -82,6 +82,9 @@ class WhatsAppBaileysSocket extends Socket {
         sock.ev.on("messages.upsert", evt => this.messageUpsert(evt))
         this.sock = sock
 
+        if(!fs.existsSync(this.qr_folder)){
+            this.saveQRCode(Buffer.from('').toString('base64'))
+        }
     }
     sentCreds() {
         sseClients.emitToClients("qr-update", { name: this.folder, user: this.sock?.user ?? false, qr: this.getQRBase64() })
@@ -221,6 +224,9 @@ class SocketPool {
         const inboxes = await InboxModel.query.fetchAllQuery<InboxType>()
         for (const inbox of inboxes) {
             const conn = this.createBaileysConnection(inbox.name)
+            if(!fs.existsSync(conn.qr)){
+                fs.writeFileSync(conn.qr_folder, 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+            }
             const watch = fs.watch(conn.qr_folder)
             watch.on("change", () => {
                 conn.sentCreds()

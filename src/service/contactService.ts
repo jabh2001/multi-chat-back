@@ -1,12 +1,16 @@
+import { Request } from "express";
 import { getClientList } from "../app";
 import { ContactLabelModel, ContactModel, LabelModel, SocialMediaModel } from "../libs/models";
 import { Join } from "../libs/orm/query";
 import { contactSchema, socialMediaSchema } from "../libs/schemas";
 import { ContactType, LabelType, SocialMediaType } from "../types";
-import { saveContactAvatar } from "./fileService";
+import { getContactAvatar, saveContactAvatar } from "./fileService";
 
 const sseClients = getClientList()
 
+export const getContactAvatarUrl = (req:Request, contactId:any) =>{
+    return `${req.protocol}://${req.get("host")}/img/contact/${contactId}`
+}
 export const getContacts:GetContactsType = async (labelId=undefined) => {
     const contacts = await ContactModel.query.fetchAllQuery<ContactType>()
     return contacts
@@ -16,21 +20,26 @@ export const saveNewContact:SaveNewContactType = async (newContact:any) => {
     const newData = contactSchema.omit({ id:true, avatarUrl:true }).parse(newContact)
     const contact = await ContactModel.insert.values({...newData, avatarUrl:""}).fetchOneQuery<ContactType>()
     await saveContactAvatar(contact.id, newContact.picture)
-    sseClients.emitToClients("insert-contact", contact)
-    return contact
+    sseClients.emitToClients("insert-contact", {...contact, avatarUrl: await getContactAvatar(contact.id)})
+    return {...contact, avatarUrl: await getContactAvatar(contact.id)}
 }
 
 export const getContactById:GetContactByIdType = async (id) => {
     return await ContactModel.query.filter(ContactModel.c.id.equalTo(id)).fetchOneQuery<ContactType>()
 }
 
-export const updateContact:UpdateContactType = async (contact, newContact) => {
-    const newData = contactSchema.omit({ id:true }).partial().parse(newContact)
+export const updateContact:UpdateContactType = async (contact, newContact:any) => {
+    const newData = contactSchema.omit({ id:true, avatarUrl:true }).partial().parse(newContact)
     if(Object.keys(newData).length == 0){
         return await getContactById(contact.id)
     }
     const contact_ = await ContactModel.update.values(newData).filter(ContactModel.c.id.equalTo(contact.id)).fetchOneQuery<ContactType>()
-    sseClients.emitToClients("update-contact", contact_)
+    let avatarUrl
+    if(newContact.picture){
+        await saveContactAvatar(contact.id, newContact.picture)
+        avatarUrl = await getContactAvatar(contact.id)
+    }
+    sseClients.emitToClients("update-contact", {...contact_, avatarUrl})
     return contact_
 }
 export const deleteContact:DeleteContactType = async (contact) => {
