@@ -3,6 +3,7 @@ import { ContactLabelModel, ContactModel, LabelModel, SocialMediaModel } from ".
 import { Join } from "../libs/orm/query";
 import { contactSchema, socialMediaSchema } from "../libs/schemas";
 import { ContactType, LabelType, SocialMediaType } from "../types";
+import { saveContactAvatar } from "./fileService";
 
 const sseClients = getClientList()
 
@@ -11,9 +12,10 @@ export const getContacts:GetContactsType = async (labelId=undefined) => {
     return contacts
 }
 
-export const saveNewContact:SaveNewContactType = async (newContact) => {
+export const saveNewContact:SaveNewContactType = async (newContact:any) => {
     const newData = contactSchema.omit({ id:true, avatarUrl:true }).parse(newContact)
-    const contact = await ContactModel.insert.values({...newData, avatarUrl:newData.name.replace(" ", "_") + ".png"}).fetchOneQuery<ContactType>()
+    const contact = await ContactModel.insert.values({...newData, avatarUrl:""}).fetchOneQuery<ContactType>()
+    await saveContactAvatar(contact.id, newContact.picture)
     sseClients.emitToClients("insert-contact", contact)
     return contact
 }
