@@ -2,7 +2,7 @@ import makeWASocket, { DisconnectReason, MessageUpsertType, downloadMediaMessage
 import { Boom } from "@hapi/boom"
 import pino from "pino"
 import qrcode from "qrcode"
-import fs from "fs"
+import fs, { unwatchFile } from "fs"
 import { ContactType, ConversationType, InboxType, Base64Buffer } from "../types"
 import { MessageType } from "./schemas"
 import { ContactModel, ConversationModel, InboxModel } from "./models"
@@ -30,6 +30,19 @@ abstract class Socket {
     getQRBase64() {
         const base64 = fs.readFileSync(this.qr_folder, { encoding: 'base64' });
         return base64
+    }
+    verifyQRFolder(){
+        try{
+            if (!fs.existsSync(QR_FOLDER)) {
+                fs.mkdirSync(QR_FOLDER);
+            }
+            if(!fs.existsSync(this.qr)){
+                fs.writeFileSync(this.qr_folder, 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+            }
+            return  true;
+        } catch(e ){
+            return false
+        }
     }
 
     async saveQRCode(qrData: string) {
@@ -218,21 +231,42 @@ class SocketPool {
     }
 
     async init() {
+        const unWatchPool = new Set<WhatsAppBaileysSocket>()
         const inboxes = await InboxModel.query.fetchAllQuery<InboxType>()
         for (const inbox of inboxes) {
             const conn = this.createBaileysConnection(inbox.name)
-            const watch = fs.watch(conn.qr_folder)
-            watch.on("change", () => {
-                conn.sentCreds()
-            })
+            const status = conn.verifyQRFolder()
+            if(status){
+                const watch = fs.watch(conn.qr_folder)
+                watch.on("change", () => {
+                    conn.sentCreds()
+                })
+            } else {
+                unWatchPool.add(conn)
+            }
         }
-        setInterval(() => {
-            this.pool.forEach(async (v, k) => {
-                if (v instanceof WhatsAppBaileysSocket) {
-                    await v.verifyStatus()
-                }
-            })
-        }, 10000)
+        // let handle = unWatchPool.size == 0
+        // while(!handle){
+        //     for(const conn of unWatchPool){
+        //         try {
+        //             if(conn.verifyQRFolder()){
+        //                 handle = true
+        //             } else {
+        //                 throw new Error()
+        //             }
+        //         } catch (e){
+        //             handle = false
+        //             break
+        //         }
+        //     }
+        // }
+        // setInterval(() => {
+        //     this.pool.forEach(async (v, k) => {
+        //         if (v instanceof WhatsAppBaileysSocket) {
+        //             await v.verifyStatus()
+        //         }
+        //     })
+        // }, 10000)
     }
 
     static getInstance() {
