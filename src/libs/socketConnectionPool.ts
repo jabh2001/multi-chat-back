@@ -201,11 +201,10 @@ class WhatsAppBaileysSocket extends Socket {
 
     }
 
-    async sendMessage(phone: string, message: MessageType) {
+    async sendMessage(phone: string, message: Omit<MessageType, "id">) {
         const mensaje = {
             text: message.content
         };
-
         return await this.sock.sendMessage(`${phone}@s.whatsapp.net`, mensaje);
     }
 
