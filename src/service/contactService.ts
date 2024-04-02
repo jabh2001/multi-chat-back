@@ -12,7 +12,17 @@ export const getContactAvatarUrl = (req:Request, contactId:any) =>{
     return `${req.protocol}://${req.get("host")}/img/contact/${contactId}`
 }
 export const getContacts:GetContactsType = async (labelId=undefined) => {
-    const contacts = await ContactModel.query.fetchAllQuery<ContactType>()
+    let contactsQuery = ContactModel.query
+    if(labelId){
+        contactsQuery = (
+            contactsQuery
+            .select(...Object.values(ContactModel.c))
+            .join(ContactLabelModel, ContactLabelModel.c.contactId, ContactModel.c.id)
+            .filter(ContactLabelModel.c.labelId.equalTo(labelId))
+            .groupBy(ContactModel.c.id)
+        )
+    }
+    const contacts = await contactsQuery.fetchAllQuery<ContactType>()
     return contacts
 }
 

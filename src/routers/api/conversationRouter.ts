@@ -5,7 +5,7 @@ const conversationRouter = Router()
 
 conversationRouter.get("/", async (req, res) => {
         try{
-            const conversations = await getConversations()
+            const conversations = await getConversations(req.query)
             res.json({ conversations:conversations.map((c:any) => {
                 const { conversation, ...rest } = c
                 return { ...conversation, ...rest }

@@ -1,11 +1,11 @@
 import { getClientList } from "../app";
-import { ContactModel, ConversationModel, InboxModel, MessageModel } from "../libs/models";
+import { ContactLabelModel, ContactModel, ConversationModel, InboxModel, MessageModel } from "../libs/models";
 import { Join, RawSQL } from "../libs/orm/query";
 import { ConversationType } from "../types";
 
 const sseClients = getClientList()
 
-export async function getConversations(){
+export async function getConversations({ inbox, label}:{ inbox?:string, label?:string}={}){
     const lastMessage = (
         MessageModel.query.select(MessageModel.c.content)
         .filter(MessageModel.c.conversationId.equalTo(ConversationModel.c.id))
@@ -21,8 +21,18 @@ export async function getConversations(){
         .subquery("lastMessageDate")
     )
     const messageCount = new RawSQL(`(SELECT count(*) FROM ${MessageModel.q} WHERE ${MessageModel.c.conversationId.q} =${ConversationModel.c.id.q} AND ${MessageModel.c.status.q} = false)`).label("messageCount")
-
-    return await ConversationModel.query.select(ConversationModel, InboxModel, ContactModel, lastMessage, lastMessageDate, messageCount).join(ConversationModel.r.inbox, Join.INNER).join(ConversationModel.r.sender, Join.INNER).fetchAllQuery()
+    let query = (
+        ConversationModel.query.
+        select(ConversationModel, InboxModel, ContactModel, lastMessage, lastMessageDate, messageCount)
+        .join(ConversationModel.r.inbox, Join.INNER)
+        .join(ConversationModel.r.sender, Join.INNER)
+    )
+    if(label){
+        query = query.join(ContactLabelModel, ContactLabelModel.c.contactId, ConversationModel.c.senderId).filter(ContactLabelModel.c.labelId.equalTo(label))
+    } else if(inbox){
+        query = query.filter(InboxModel.c.id.equalTo(inbox))
+    }
+    return await query.fetchAllQuery()
 }
 export async function getInboxConversations(inboxId:any){
     const lastMessage = (
