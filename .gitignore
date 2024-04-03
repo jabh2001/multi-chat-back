@@ -15,8 +15,7 @@ dist-ssr
 # Editor directories and files
 QRs/*
 sessions/*
-files
-files/*
+files/contacts/*
 .vscode/*
 !.vscode/extensions.json
 .idea

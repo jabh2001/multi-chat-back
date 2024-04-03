@@ -4,7 +4,7 @@ import pino from "pino"
 import qrcode from "qrcode"
 import fs, { unwatchFile } from "fs"
 import { ContactType, ConversationType, InboxType, Base64Buffer } from "../types"
-import { MessageType, socialMediaSchema } from "./schemas"
+import { ConversationSchemaType, MessageType, socialMediaSchema } from "./schemas"
 import { ContactModel, ConversationModel, InboxModel } from "./models"
 import path from "path"
 import { getClientList, getWss } from "../app"
@@ -191,24 +191,24 @@ class WhatsAppBaileysSocket extends Socket {
             //     for (const ws of wss.clients) {
             //         ws.emit('message-upsert' + conversationID, { ...result, text, fromMe, messageID: m.key.id, base64Buffer });
             //    }}
-            if (result && m.key.id) {
-                const conversationID = result.conversation.id
-                const fromMe = m.key.fromMe === true;
-                const data = { ...result, text, fromMe, messageID: m.key.id, base64Buffer }
-                let message
-                if (fromMe) {
-                    const res = await getMessageByWhatsAppId(m.key.id)
-                    if (res.length == 0) {
-                        message = await WS.outgoingMessageFromWS(data)
-                    }
-                } else {
-                    message = await WS.incomingMessage(data)
-                }
-                if (message) {
-                    for (const ws of wss.clients) {
-                        ws.emit('message-upsert' + conversationID, message);
-                    }
-                }
+            if (false && result && m.key.id) {
+                // const conversationID = result.conversation.id
+                // const fromMe = m.key.fromMe === true;
+                // const data = { ...result, text, fromMe, messageID: m.key.id, base64Buffer }
+                // let message
+                // if (fromMe) {
+                //     const res = await getMessageByWhatsAppId(m.key.id)
+                //     if (res.length == 0) {
+                //         message = await WS.outgoingMessageFromWS(data)
+                //     }
+                // } else {
+                //     message = await WS.incomingMessage(data)
+                // }
+                // if (message) {
+                //     for (const ws of wss.clients) {
+                //         ws.emit('message-upsert' + conversationID, message);
+                //     }
+                // }
             } else {
                 const phoneNumber ='+'+ m.key.remoteJid?.split('@')[0]
                 if (phoneNumber == '+status') return
@@ -222,14 +222,13 @@ class WhatsAppBaileysSocket extends Socket {
                 console.log('este es el nuevo contacto', newContact)
                 console.log(m)
                 const resultContact = await saveNewContact(newContact)
-                const inbox:InboxType = (await InboxModel.query.filter(InboxModel.c.name.equalTo(this.folder)).fetchAllQuery())[0] as InboxType
-                const conversation:Omit<ConversationType,"id"> ={
-                    contact:resultContact,
-                    inbox,
-                    messages:[],
-                    unread_count:0
+                // const inbox:InboxType = (await InboxModel.query.filter(InboxModel.c.name.equalTo(this.folder)).fetchAllQuery())[0] as InboxType
+                const inbox:InboxType = await InboxModel.query.filter(InboxModel.c.name.equalTo(this.folder)).fetchOneQuery<InboxType>()
+                const conversation:Omit<ConversationSchemaType,"id"> ={
+                    senderId:resultContact.id,
+                    inboxId:inbox.id
                 }
-                 const newConversation = await saveNewConversation(conversation)
+                const newConversation = await saveNewConversation(conversation)
             }
 
         })

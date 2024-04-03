@@ -1,6 +1,7 @@
 import { getClientList } from "../app";
 import { ContactModel, ConversationModel, InboxModel, MessageModel } from "../libs/models";
 import { Join, RawSQL } from "../libs/orm/query";
+import { type ConversationSchemaType, conversationSchema } from "../libs/schemas";
 import { ConversationType } from "../types";
 
 const sseClients = getClientList()
@@ -42,10 +43,11 @@ export async function getInboxConversations(inboxId:any){
     return await ConversationModel.query.select(...Object.values(ConversationModel.c), lastMessage, messageCount).filter(ConversationModel.c.inboxId.equalTo(inboxId)).fetchAllQuery<ConversationType>()
 }
 
-export async function saveNewConversation(conversation:Omit<ConversationType, "id">){
+export async function saveNewConversation(conversation:Omit<ConversationSchemaType, "id">){
     console.log(conversation)
-    const thequery = ConversationModel.insert.value({...conversation }).getSQL()
+    const thequery = ConversationModel.insert.value(conversationSchema.parse(conversation)).getSQL()
     console.log('este es el sql', thequery)
+    return
     const newConversation = await ConversationModel.insert.value({...conversation }).fetchOneQuery<ConversationType>();
     sseClients.emitToClients("insert-conversation", newConversation)
     return newConversation

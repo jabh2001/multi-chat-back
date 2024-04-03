@@ -41,6 +41,13 @@ export const inboxSchema = z.object({
     name:z.string({ required_error:"Name is required" }).max(50, "Name length max 50 character"),
     channelType:z.enum(["whatsapp"])
 })
+export const conversationSchema = z.object({
+    id:z.number().positive().optional(),
+    inboxId:z.number().positive(),
+    senderId:z.number().positive(),
+    assignedUserId:z.number().positive().optional(),
+    assignedTeamId:z.number().positive().optional(),
+})
 
 export const messageSchema = z.object({
     id:z.number().positive(),
@@ -66,4 +73,5 @@ export type TeamType = z.infer<typeof teamSchema>
 export type ContactType = z.infer<typeof contactSchema>
 export type SocialMediaType = z.infer<typeof socialMediaSchema>
 export type InboxType = z.infer<typeof inboxSchema>
+export type ConversationSchemaType = z.infer<typeof conversationSchema>
 export type MessageType = z.infer<typeof messageSchema>
