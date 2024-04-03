@@ -1,4 +1,4 @@
-import makeWASocket, { DisconnectReason, MessageUpsertType, downloadMediaMessage, proto, useMultiFileAuthState } from "@whiskeysockets/baileys"
+import makeWASocket, { DisconnectReason, MessageUpsertType, downloadMediaMessage, proto, useMultiFileAuthState, makeInMemoryStore } from "@whiskeysockets/baileys"
 import { Boom } from "@hapi/boom"
 import pino from "pino"
 import qrcode from "qrcode"
@@ -67,13 +67,18 @@ abstract class Socket {
 }
 class WhatsAppBaileysSocket extends Socket {
     sock: any
+    store:any
 
     constructor(folder: string) {
         super(folder)
         this.start()
+        
     }
     async start() {
+
         const { state, saveCreds } = await useMultiFileAuthState(`sessions/${this.folder}`)
+        const store =  makeInMemoryStore({ })
+        store.
         const sock = makeWASocket({ auth: state, logger: pino({ level: "silent" }) })
 
         sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
@@ -203,9 +208,7 @@ class WhatsAppBaileysSocket extends Socket {
         } else {
             const phoneNumber = '+' + m.key.remoteJid?.split('@')[0]
             if (phoneNumber == '+status') return
-            if(m.key.fromMe ===true){
-                console.log(JSON.stringify(m))
-            }
+            if(m.key.fromMe ===true)return
             let existContact = await ContactModel.query.filter(ContactModel.c.phoneNumber.equalTo(phoneNumber)).fetchOneQuery()as ContactType
             if (existContact) {
                 const inbox: InboxType = await InboxModel.query.filter(InboxModel.c.name.equalTo(this.folder)).fetchOneQuery<InboxType>()
@@ -216,6 +219,8 @@ class WhatsAppBaileysSocket extends Socket {
                 await saveNewConversation(conversation)
             }
             else{
+                
+                return
                 const newContact: Omit<ContactType, 'id'> = {
                     avatarUrl: '',
                     labels: [],
@@ -232,7 +237,9 @@ class WhatsAppBaileysSocket extends Socket {
                 await saveNewConversation(conversation)
             }
             await this.sendMessageorContact({ m, MEDIAMESSAGE })
+
         }
+        return
     }
     async messageUpsert({ messages, type }: { messages: proto.IWebMessageInfo[], type: MessageUpsertType }) {
         const MEDIAMESSAGE = ['audioMessage', 'imageMessage', 'videoMessage', 'documentMessage']
