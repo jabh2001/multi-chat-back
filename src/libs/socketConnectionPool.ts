@@ -2,7 +2,7 @@ import makeWASocket, { DisconnectReason, MessageUpsertType, downloadMediaMessage
 import { Boom } from "@hapi/boom"
 import pino from "pino"
 import qrcode from "qrcode"
-import fs, { unwatchFile } from "fs"
+import fs from "fs"
 import { ContactType, ConversationType, InboxType, Base64Buffer } from "../types"
 import { ConversationSchemaType, MessageType, socialMediaSchema } from "./schemas"
 import { ContactModel, ConversationModel, InboxModel } from "./models"
@@ -144,74 +144,78 @@ class WhatsAppBaileysSocket extends Socket {
         }
     }
 
-
-    async messageUpsert({ messages, type }: { messages: proto.IWebMessageInfo[], type: MessageUpsertType }) {
+    async sendMessageorContact({ m, MEDIAMESSAGE }: { m: proto.IWebMessageInfo, MEDIAMESSAGE: string[], }): Promise<void> {
         const wss = getWss()
-        const MEDIAMESSAGE = ['audioMessage', 'imageMessage', 'videoMessage', 'documentMessage']
-        messages.forEach(async (m) => {
-            console.log(m)
-            if (!m.message) return
-            if(m.key.remoteJid?.split('@')[1]==='g.us')return
-            let base64Buffer: null | Base64Buffer = null
-            if (MEDIAMESSAGE.includes(Object.keys(m.message)[0])) {
-                try {
-                    const buffer = await downloadMediaMessage(
-                        m,
-                        'buffer',
-                        {},
-                        {
-                            logger: this.sock.logger,
-                            reuploadRequest: this.sock.updateMediaMessage
-                        }
-                    );
-                    base64Buffer = {
-                        base64: buffer.toString('base64'),
-                        tipo: Object.keys(m.message)[0]
+
+        if (!m.message) return
+        if (m.key.remoteJid?.split('@')[1] === 'g.us') return
+        let base64Buffer: null | Base64Buffer = null
+        if (MEDIAMESSAGE.includes(Object.keys(m.message)[0])) {
+            try {
+                const buffer = await downloadMediaMessage(
+                    m,
+                    'buffer',
+                    {},
+                    {
+                        logger: this.sock.logger,
+                        reuploadRequest: this.sock.updateMediaMessage
                     }
-                } catch (error) {
-                    console.error('Error al descargar el medio:', error);
+                );
+                base64Buffer = {
+                    base64: buffer.toString('base64'),
+                    tipo: Object.keys(m.message)[0]
+                }
+            } catch (error) {
+                console.error('Error al descargar el medio:', error);
+            }
+        }
+
+        const phoneNumber = '+' + m.key.remoteJid?.split('@')[0]
+        const text = m.message?.conversation || m.message?.extendedTextMessage?.text
+        const joinResult = (
+            await ContactModel.query
+                .join(ContactModel.r.conversations, Join.INNER)
+                .join(InboxModel, ConversationModel.c.inboxId, InboxModel.c.id)
+                .filter(ContactModel.c.phoneNumber.equalTo(phoneNumber), InboxModel.c.name.equalTo(this.folder))
+                .fetchAllQuery<ContactType & { conversation: ConversationType, inbox: InboxType }>()
+        )
+
+        const result = joinResult[0];
+
+        if (result && m.key.id) {
+            const conversationID = result.conversation.id
+            const fromMe = m.key.fromMe === true;
+            const data = { ...result, text, fromMe, messageID: m.key.id, base64Buffer }
+            let message
+            if (fromMe) {
+                const res = await getMessageByWhatsAppId(m.key.id)
+                if (res.length == 0) {
+                    message = await WS.outgoingMessageFromWS(data)
+                }
+            } else {
+                message = await WS.incomingMessage(data)
+            }
+            if (message) {
+                for (const ws of wss.clients) {
+                    ws.emit('message-upsert' + conversationID, message);
                 }
             }
-
+        } else {
             const phoneNumber = '+' + m.key.remoteJid?.split('@')[0]
-            const text = m.message?.conversation || m.message?.extendedTextMessage?.text
-            const joinResult = (
-                await ContactModel.query
-                    .join(ContactModel.r.conversations, Join.INNER)
-                    .join(InboxModel, ConversationModel.c.inboxId, InboxModel.c.id)
-                    .filter(ContactModel.c.phoneNumber.equalTo(phoneNumber), InboxModel.c.name.equalTo(this.folder))
-                    .fetchAllQuery<ContactType & { conversation: ConversationType, inbox: InboxType }>()
-            )
-
-            const result = joinResult[0];
-            console.log('este es el result\n', result)
-
-
-            // if (result) {
-            //     for (const ws of wss.clients) {
-            //         ws.emit('message-upsert' + conversationID, { ...result, text, fromMe, messageID: m.key.id, base64Buffer });
-            //    }}
-            if (false && result && m.key.id) {
-                // const conversationID = result.conversation.id
-                // const fromMe = m.key.fromMe === true;
-                // const data = { ...result, text, fromMe, messageID: m.key.id, base64Buffer }
-                // let message
-                // if (fromMe) {
-                //     const res = await getMessageByWhatsAppId(m.key.id)
-                //     if (res.length == 0) {
-                //         message = await WS.outgoingMessageFromWS(data)
-                //     }
-                // } else {
-                //     message = await WS.incomingMessage(data)
-                // }
-                // if (message) {
-                //     for (const ws of wss.clients) {
-                //         ws.emit('message-upsert' + conversationID, message);
-                //     }
-                // }
-            } else {
-                const phoneNumber ='+'+ m.key.remoteJid?.split('@')[0]
-                if (phoneNumber == '+status') return
+            if (phoneNumber == '+status') return
+            if(m.key.fromMe ===true){
+                console.log(JSON.stringify(m))
+            }
+            let existContact = await ContactModel.query.filter(ContactModel.c.phoneNumber.equalTo(phoneNumber)).fetchOneQuery()as ContactType
+            if (existContact) {
+                const inbox: InboxType = await InboxModel.query.filter(InboxModel.c.name.equalTo(this.folder)).fetchOneQuery<InboxType>()
+                const conversation: Omit<ConversationSchemaType, "id"> = {
+                    senderId: existContact.id,
+                    inboxId: inbox.id
+                }
+                await saveNewConversation(conversation)
+            }
+            else{
                 const newContact: Omit<ContactType, 'id'> = {
                     avatarUrl: '',
                     labels: [],
@@ -219,17 +223,21 @@ class WhatsAppBaileysSocket extends Socket {
                     name: m.pushName!,
                     phoneNumber
                 }
-                console.log('este es el nuevo contacto', newContact)
-                console.log(m)
                 const resultContact = await saveNewContact(newContact)
-                // const inbox:InboxType = (await InboxModel.query.filter(InboxModel.c.name.equalTo(this.folder)).fetchAllQuery())[0] as InboxType
-                const inbox:InboxType = await InboxModel.query.filter(InboxModel.c.name.equalTo(this.folder)).fetchOneQuery<InboxType>()
-                const conversation:Omit<ConversationSchemaType,"id"> ={
-                    senderId:resultContact.id,
-                    inboxId:inbox.id
+                const inbox: InboxType = await InboxModel.query.filter(InboxModel.c.name.equalTo(this.folder)).fetchOneQuery<InboxType>()
+                const conversation: Omit<ConversationSchemaType, "id"> = {
+                    senderId: resultContact.id,
+                    inboxId: inbox.id
                 }
-                const newConversation = await saveNewConversation(conversation)
+                await saveNewConversation(conversation)
             }
+            await this.sendMessageorContact({ m, MEDIAMESSAGE })
+        }
+    }
+    async messageUpsert({ messages, type }: { messages: proto.IWebMessageInfo[], type: MessageUpsertType }) {
+        const MEDIAMESSAGE = ['audioMessage', 'imageMessage', 'videoMessage', 'documentMessage']
+        messages.forEach(async (m) => {
+            this.sendMessageorContact({ m, MEDIAMESSAGE })
 
         })
 

@@ -47,7 +47,6 @@ export async function saveNewConversation(conversation:Omit<ConversationSchemaTy
     console.log(conversation)
     const thequery = ConversationModel.insert.value(conversationSchema.parse(conversation)).getSQL()
     console.log('este es el sql', thequery)
-    return
     const newConversation = await ConversationModel.insert.value({...conversation }).fetchOneQuery<ConversationType>();
     sseClients.emitToClients("insert-conversation", newConversation)
     return newConversation
