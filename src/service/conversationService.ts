@@ -43,6 +43,9 @@ export async function getInboxConversations(inboxId:any){
 }
 
 export async function saveNewConversation(conversation:Omit<ConversationType, "id">){
+    console.log(conversation)
+    const thequery = ConversationModel.insert.value({...conversation }).getSQL()
+    console.log('este es el sql', thequery)
     const newConversation = await ConversationModel.insert.value({...conversation }).fetchOneQuery<ConversationType>();
     sseClients.emitToClients("insert-conversation", newConversation)
     return newConversation

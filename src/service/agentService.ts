@@ -51,12 +51,17 @@ export const updateAgentTeams:UpdateAgentTeamsType = async (agent, teams)=>{
 }
 
 export const verifyUser = async (email:string, password:string) => {
+    console.log({email, password})
     const res = await UserModel.query.filter(UserModel.c.email.equalTo(email)).fetchAllQuery()
     if(!res.length){
         throw new Error("Email or password incorrect")
     }
+    console.log('no entro')
     const [ user, _] = res as any
     if (!await bcrypt.compare(password, user.password)){
+        console.log('entró')
+        
+        console.log(await bcrypt.hash(password,10), user.password)
         throw new Error("Email or password incorrect")
     }
     // Remove password before sending back to client

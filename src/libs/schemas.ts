@@ -23,7 +23,7 @@ export const teamSchema = z.object({
 export const contactSchema = z.object({
     id:z.number().positive(),
     name:z.string({ required_error:"Name is required" }).max(50, "Name length max 50 character"),
-    email:z.string().email("Email format error"),
+    email:z.string().email("Email format error").optional(),
     phoneNumber:z.string().max(16, "Phone too long"),
     avatarUrl:z.string().max(255, "Url too long 255 chars"),
 })
@@ -56,6 +56,9 @@ export const messageSchema = z.object({
     private:z.boolean().default(false),
     createdAt:z.date().optional(),
 })      
+
+
+
 
 export type UserType = z.infer<typeof userSchema>
 export type LabelType = z.infer<typeof labelSchema>

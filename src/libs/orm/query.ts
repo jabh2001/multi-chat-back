@@ -311,7 +311,7 @@ export class Update extends Query {
     }
     getSQL(): (string | any[])[] {
         const [ statement, values ] = this.setStatement()
-        const [where, params] = this.where.getWhere(values.length)
+        const [where, params] = this.where.getWhere(values.length + 1)
 
         let sql = `UPDATE ${this.model.repository.tableName} ${statement}  ${where} RETURNING *;`
         return [sql, [...values, ...params]]

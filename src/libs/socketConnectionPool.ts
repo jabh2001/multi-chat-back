@@ -4,7 +4,7 @@ import pino from "pino"
 import qrcode from "qrcode"
 import fs, { unwatchFile } from "fs"
 import { ContactType, ConversationType, InboxType, Base64Buffer } from "../types"
-import { MessageType } from "./schemas"
+import { MessageType, socialMediaSchema } from "./schemas"
 import { ContactModel, ConversationModel, InboxModel } from "./models"
 import path from "path"
 import { getClientList, getWss } from "../app"
@@ -12,6 +12,8 @@ import "./dataBase"
 import WS from "./websocket"
 import { getMessageByWhatsAppId } from "../service/messageService"
 import { Join } from "./orm/query"
+import { saveNewContact } from "../service/contactService"
+import { saveNewConversation } from "../service/conversationService"
 
 
 const sseClients = getClientList()
@@ -31,16 +33,16 @@ abstract class Socket {
         const base64 = fs.readFileSync(this.qr_folder, { encoding: 'base64' });
         return base64
     }
-    verifyQRFolder(){
-        try{
+    verifyQRFolder() {
+        try {
             if (!fs.existsSync(QR_FOLDER)) {
                 fs.mkdirSync(QR_FOLDER);
             }
-            if(!fs.existsSync(this.qr)){
+            if (!fs.existsSync(this.qr)) {
                 fs.writeFileSync(this.qr_folder, 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
             }
-            return  true;
-        } catch(e ){
+            return true;
+        } catch (e) {
             return false
         }
     }
@@ -95,6 +97,9 @@ class WhatsAppBaileysSocket extends Socket {
         sock.ev.on("messages.upsert", evt => this.messageUpsert(evt))
         this.sock = sock
 
+        if (!fs.existsSync(this.qr_folder)) {
+            this.saveQRCode(Buffer.from('').toString('base64'))
+        }
     }
     sentCreds() {
         sseClients.emitToClients("qr-update", { name: this.folder, user: this.sock?.user ?? false, qr: this.getQRBase64() })
@@ -144,7 +149,9 @@ class WhatsAppBaileysSocket extends Socket {
         const wss = getWss()
         const MEDIAMESSAGE = ['audioMessage', 'imageMessage', 'videoMessage', 'documentMessage']
         messages.forEach(async (m) => {
+            console.log(m)
             if (!m.message) return
+            if(m.key.remoteJid?.split('@')[1]==='g.us')return
             let base64Buffer: null | Base64Buffer = null
             if (MEDIAMESSAGE.includes(Object.keys(m.message)[0])) {
                 try {
@@ -175,19 +182,18 @@ class WhatsAppBaileysSocket extends Socket {
                     .filter(ContactModel.c.phoneNumber.equalTo(phoneNumber), InboxModel.c.name.equalTo(this.folder))
                     .fetchAllQuery<ContactType & { conversation: ConversationType, inbox: InboxType }>()
             )
-            if (joinResult.length == 0) {
-                return
-            }
+
             const result = joinResult[0];
-            const conversationID = result.conversation.id
-            const fromMe = m.key.fromMe === true;
+            console.log('este es el result\n', result)
+
 
             // if (result) {
             //     for (const ws of wss.clients) {
             //         ws.emit('message-upsert' + conversationID, { ...result, text, fromMe, messageID: m.key.id, base64Buffer });
             //    }}
             if (result && m.key.id) {
-                
+                const conversationID = result.conversation.id
+                const fromMe = m.key.fromMe === true;
                 const data = { ...result, text, fromMe, messageID: m.key.id, base64Buffer }
                 let message
                 if (fromMe) {
@@ -204,7 +210,26 @@ class WhatsAppBaileysSocket extends Socket {
                     }
                 }
             } else {
-
+                const phoneNumber ='+'+ m.key.remoteJid?.split('@')[0]
+                if (phoneNumber == '+status') return
+                const newContact: Omit<ContactType, 'id'> = {
+                    avatarUrl: '',
+                    labels: [],
+                    socialMedia: [],
+                    name: m.pushName!,
+                    phoneNumber
+                }
+                console.log('este es el nuevo contacto', newContact)
+                console.log(m)
+                const resultContact = await saveNewContact(newContact)
+                const inbox:InboxType = (await InboxModel.query.filter(InboxModel.c.name.equalTo(this.folder)).fetchAllQuery())[0] as InboxType
+                const conversation:Omit<ConversationType,"id"> ={
+                    contact:resultContact,
+                    inbox,
+                    messages:[],
+                    unread_count:0
+                }
+                 const newConversation = await saveNewConversation(conversation)
             }
 
         })
@@ -236,7 +261,7 @@ class SocketPool {
         for (const inbox of inboxes) {
             const conn = this.createBaileysConnection(inbox.name)
             const status = conn.verifyQRFolder()
-            if(status){
+            if (status) {
                 const watch = fs.watch(conn.qr_folder)
                 watch.on("change", () => {
                     conn.sentCreds()

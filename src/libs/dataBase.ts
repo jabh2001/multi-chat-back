@@ -6,8 +6,8 @@ import { saveNewAgent } from '../service/agentService';
 const dbConfig = {
   user: process.env.DB_USER||'postgres',
   host: process.env.DB_HOST||'localhost',
-  database: process.env.DB_NAME|| 'multi-chat',
-  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME|| 'multichat',
+  password: process.env.DB_PASSWORD || 'pokemon70',
   port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432,
 };
 

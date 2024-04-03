@@ -1,14 +1,14 @@
 import { NextFunction, Request, Response, Router } from "express"
-import { deleteContact, deleteSocialMedia, getContactById, getContactLabels, getContactSocialMedia, getContacts, saveNewContact, saveNewContactSocialMedia, updateContact, updateContactLabel, updateSocialMedia } from "../../service/contactService"
+import { deleteContact, deleteSocialMedia, getContactAvatarUrl, getContactById, getContactLabels, getContactSocialMedia, getContacts, saveNewContact, saveNewContactSocialMedia, updateContact, updateContactLabel, updateSocialMedia } from "../../service/contactService"
 import { SocialMediaModel } from "../../libs/models"
 import { errorResponse } from "../../service/errorService"
-import { getContactAvatar } from "../../service/fileService"
+import { contactAvatarFileName, getContactAvatar } from "../../service/fileService"
 const contactRouter = Router()
 
 const getModelMiddleware = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const contact = await getContactById(Number(req.params.id))
-        req.contact = contact
+        req.contact = {...contact, avatarUrl: getContactAvatarUrl(req, contact.id)}
     } catch (e: any) {
         return errorResponse(res, e)
     }
@@ -24,7 +24,8 @@ contactRouter.route("/")
         try {
             const label = req.query.label
             const contacts = await getContacts(label ? Number(label) : undefined)
-            res.json({ contacts })
+            let parse = contacts.map(c => ({ ...c, avatarUrl: getContactAvatarUrl(req, c.id) }))
+            res.json({ contacts: parse })
         } catch (e: any) {
             return errorResponse(res, e)
         }

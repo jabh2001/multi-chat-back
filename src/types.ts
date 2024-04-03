@@ -27,7 +27,7 @@ export type SocialMediaType = {
 export type ContactType = {
     id:number
     name:string
-    email:string
+    email?:string 
     phoneNumber:string
     avatarUrl:string
     labels:LabelType[]
