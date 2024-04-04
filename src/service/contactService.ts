@@ -12,24 +12,40 @@ export const getContactAvatarUrl = (req:Request, contactId:any) =>{
     return `${req.protocol}://${req.get("host")}/img/contact/${contactId}`
 }
 export const getContacts:GetContactsType = async (labelId=undefined) => {
-    const contacts = await ContactModel.query.fetchAllQuery<ContactType>()
+    let contactsQuery = ContactModel.query
+    if(labelId){
+        contactsQuery = (
+            contactsQuery
+            .select(...Object.values(ContactModel.c))
+            .join(ContactLabelModel, ContactLabelModel.c.contactId, ContactModel.c.id)
+            .filter(ContactLabelModel.c.labelId.equalTo(labelId))
+            .groupBy(ContactModel.c.id)
+        )
+    }
+    const contacts = await contactsQuery.fetchAllQuery<ContactType>()
     return contacts
 }
 
 export const saveNewContact:SaveNewContactType = async (newContact:any) => {
     const newData = contactSchema.omit({ id:true, avatarUrl:true }).parse(newContact)
     const contact = await ContactModel.insert.values({...newData, avatarUrl:""}).fetchOneQuery<ContactType>()
-     console.log(contact)
-    // console.log(newContact)
-    // let contactPic
-    
-    // if(newContact.picture)await saveContactAvatar(contact.id, newContact.picture)
-    // sseClients.emitToClients("insert-contact", {...contact, avatarUrl: await getContactAvatar(contact.id)})
-    return {...contact}
+    await saveContactAvatar(contact.id, newContact.picture)
+    sseClients.emitToClients("insert-contact", {...contact, avatarUrl: await getContactAvatar(contact.id)})
+    return {...contact, avatarUrl: await getContactAvatar(contact.id)}
 }
 
 export const getContactById:GetContactByIdType = async (id) => {
     return await ContactModel.query.filter(ContactModel.c.id.equalTo(id)).fetchOneQuery<ContactType>()
+}
+
+export const getOrCreateContactByPhoneNumber = async (phoneNumber:string, contactName:string) => {
+    const existingContact =  await ContactModel.query.filter(ContactModel.c.phoneNumber.equalTo(phoneNumber)).fetchAllQuery<ContactType>()
+    
+    if(existingContact.length > 0){
+        return existingContact[0]
+    }
+    const contact = await saveNewContact({ phoneNumber, name:contactName })
+    return contact
 }
 
 export const updateContact:UpdateContactType = async (contact, newContact:any) => {
@@ -81,7 +97,7 @@ export const deleteSocialMedia:updateSocialMediaType = async (socialMediaId) => 
 }
 
 type GetContactsType = (label?:undefined | number) => Promise<ContactType[]>
-type SaveNewContactType = (newContact:Omit<ContactType, "id">) => Promise<ContactType>
+type SaveNewContactType = (newContact:Partial<Omit<ContactType, "id">>) => Promise<ContactType>
 type GetContactByIdType = (id:ContactType["id"]) => Promise<ContactType>
 type UpdateContactType = (contact:ContactType, newData:Partial<ContactType>) => Promise<ContactType>
 type DeleteContactType = (contact:ContactType) => Promise<ContactType>

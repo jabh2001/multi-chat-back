@@ -42,6 +42,7 @@ export class Query {
     protected where:Where
     protected joins:Join[]
     protected _order?:Order
+    protected _groupBy?:Group
     private _limit:number
     private _offset:number
 
@@ -142,6 +143,10 @@ export class Query {
         }
         return this
     }
+    groupBy(column:Column){
+        this._groupBy = new Group(column)
+        return this
+    }
     // Alias for join () but for support change
     bind(model:Model, columnA?:Column, columnB?:Column){
         let join : Join | undefined = undefined
@@ -179,8 +184,9 @@ export class Query {
         const order = this._order ? this._order.getOrder() :""
         const limit = this._limit > 0 ? `LIMIT ${this._limit}`: ""
         const offset = this._offset > 0 ? `OFFSET ${this._offset}`: ""
+        const groupBy = this._groupBy ? this._groupBy.getGroupBySQL() : ""
         
-        let sql = `SELECT ${fields} FROM ${this.model.q} ${join} ${where} ${order} ${limit} ${offset}`
+        let sql = `SELECT ${fields} FROM ${this.model.q} ${join} ${where} ${groupBy} ${order} ${limit} ${offset}`
         return [sql, [...fieldsParams, ...params]]
     }
 
@@ -390,6 +396,14 @@ export class Order{
     }
     public static ASC = "ASC" as const 
     public static DESC = "DESC" as const
+}
+
+export class Group {
+    constructor(private column:Column){}
+
+    getGroupBySQL(){
+        return `GROUP BY ${this.column.q}`
+    }
 }
 
 export class Subquery{

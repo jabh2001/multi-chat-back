@@ -78,7 +78,6 @@ class WhatsAppBaileysSocket extends Socket {
 
         const { state, saveCreds } = await useMultiFileAuthState(`sessions/${this.folder}`)
         const store =  makeInMemoryStore({ })
-        store.
         const sock = makeWASocket({ auth: state, logger: pino({ level: "silent" }) })
 
         sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
@@ -102,7 +101,7 @@ class WhatsAppBaileysSocket extends Socket {
         sock.ev.on("messages.upsert", evt => this.messageUpsert(evt))
         this.sock = sock
 
-        if (!fs.existsSync(this.qr_folder)) {
+        if(!fs.existsSync(this.qr_folder)){
             this.saveQRCode(Buffer.from('').toString('base64'))
         }
     }
@@ -219,8 +218,7 @@ class WhatsAppBaileysSocket extends Socket {
                 await saveNewConversation(conversation)
             }
             else{
-                
-                return
+        
                 const newContact: Omit<ContactType, 'id'> = {
                     avatarUrl: '',
                     labels: [],
@@ -250,11 +248,10 @@ class WhatsAppBaileysSocket extends Socket {
 
     }
 
-    async sendMessage(phone: string, message: MessageType) {
+    async sendMessage(phone: string, message: Omit<MessageType, "id">) {
         const mensaje = {
             text: message.content
         };
-
         return await this.sock.sendMessage(`${phone}@s.whatsapp.net`, mensaje);
     }
 

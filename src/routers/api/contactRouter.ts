@@ -3,6 +3,7 @@ import { deleteContact, deleteSocialMedia, getContactAvatarUrl, getContactById, 
 import { SocialMediaModel } from "../../libs/models"
 import { errorResponse } from "../../service/errorService"
 import { contactAvatarFileName, getContactAvatar } from "../../service/fileService"
+import { sendMessageToContact } from "../../service/messageService"
 const contactRouter = Router()
 
 const getModelMiddleware = async (req: Request, res: Response, next: NextFunction) => {
@@ -93,6 +94,22 @@ contactRouter.route("/:id/labels")
             return errorResponse(res, e)
         }
     })
+
+/**
+ * 
+ *  req.body params:
+ * 
+ *  inboxName:string
+ *  message:string
+ */
+contactRouter.post("/:id/message", getModelMiddleware, async (req, res) => {
+    try {
+        const message = await sendMessageToContact(req.contact, req.body)
+        res.json({ message })
+    } catch (e) {
+        return errorResponse(res, e)
+    }
+})
 contactRouter.route("/:id/social-media")
     .get(async (req, res) => {
         try {
