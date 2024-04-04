@@ -77,8 +77,7 @@ class WhatsAppBaileysSocket extends Socket {
     async start() {
 
         const { state, saveCreds } = await useMultiFileAuthState(`sessions/${this.folder}`)
-        const store =  makeInMemoryStore({ })
-        store.
+        
         const sock = makeWASocket({ auth: state, logger: pino({ level: "silent" }) })
 
         sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
@@ -214,7 +213,7 @@ class WhatsAppBaileysSocket extends Socket {
                 const inbox: InboxType = await InboxModel.query.filter(InboxModel.c.name.equalTo(this.folder)).fetchOneQuery<InboxType>()
                 const conversation: Omit<ConversationSchemaType, "id"> = {
                     senderId: existContact.id,
-                    inboxId: inbox.id
+                    inboxId: inbox.id 
                 }
                 await saveNewConversation(conversation)
             }
