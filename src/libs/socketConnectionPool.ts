@@ -1,4 +1,4 @@
-import makeWASocket, { DisconnectReason, MessageUpsertType, downloadMediaMessage, proto, useMultiFileAuthState, makeInMemoryStore } from "@whiskeysockets/baileys"
+import makeWASocket, { DisconnectReason, MessageUpsertType, downloadMediaMessage, proto, useMultiFileAuthState, makeInMemoryStore, initAuthCreds } from "@whiskeysockets/baileys"
 import { Boom } from "@hapi/boom"
 import pino from "pino"
 import qrcode from "qrcode"
@@ -12,8 +12,9 @@ import "./dataBase"
 import WS from "./websocket"
 import { getMessageByWhatsAppId } from "../service/messageService"
 import { Join } from "./orm/query"
-import { saveNewContact } from "../service/contactService"
-import { saveNewConversation } from "../service/conversationService"
+import { getOrCreateContactByPhoneNumber, saveNewContact } from "../service/contactService"
+import { getOrCreateConversation, saveNewConversation } from "../service/conversationService"
+import { getInboxByName } from "../service/inboxService"
 
 
 const sseClients = getClientList()
@@ -68,6 +69,7 @@ abstract class Socket {
 class WhatsAppBaileysSocket extends Socket {
     sock: any
     store:any
+    saveCreds:any
 
     constructor(folder: string) {
         super(folder)
@@ -77,7 +79,6 @@ class WhatsAppBaileysSocket extends Socket {
     async start() {
 
         const { state, saveCreds } = await useMultiFileAuthState(`sessions/${this.folder}`)
-        const store =  makeInMemoryStore({ })
         const sock = makeWASocket({ auth: state, logger: pino({ level: "silent" }) })
 
         sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
@@ -89,9 +90,6 @@ class WhatsAppBaileysSocket extends Socket {
 
                 if (shouldReconnect) {
                     await this.start()
-                } else if (shouldLogout) {
-                    console.log("logout")
-                    await this.logout()
                 }
             } else if (connection === "open") {
                 this.sentCreds()
@@ -100,6 +98,7 @@ class WhatsAppBaileysSocket extends Socket {
         sock.ev.on("creds.update", async () => await Promise.all([saveCreds(), this.sentCreds()]))
         sock.ev.on("messages.upsert", evt => this.messageUpsert(evt))
         this.sock = sock
+        this.saveCreds = saveCreds
 
         if(!fs.existsSync(this.qr_folder)){
             this.saveQRCode(Buffer.from('').toString('base64'))
@@ -127,6 +126,7 @@ class WhatsAppBaileysSocket extends Socket {
         }
     }
     async logout() {
+        await this.sock.logout()
         const carpetaSesion = path.join(SESSION_FOLDER, this.folder);
 
         // Verificar si la carpeta existe
@@ -184,8 +184,20 @@ class WhatsAppBaileysSocket extends Socket {
                 .fetchAllQuery<ContactType & { conversation: ConversationType, inbox: InboxType }>()
         )
 
-        const result = joinResult[0];
-
+        let result = joinResult[0];
+        if(!result){
+            const phoneNumber = '+' + m.key.remoteJid?.split('@')[0]
+            if (phoneNumber == '+status') return
+            if(m.key.fromMe ===true)return
+            const inbox = await getInboxByName(this.folder)
+            const contact = await getOrCreateContactByPhoneNumber(phoneNumber, m.pushName!)
+            const conversation = await getOrCreateConversation(inbox.id, contact.id)
+            result = {
+                ...contact,
+                inbox,
+                conversation
+            }
+        }
         if (result && m.key.id) {
             const conversationID = result.conversation.id
             const fromMe = m.key.fromMe === true;
@@ -204,48 +216,13 @@ class WhatsAppBaileysSocket extends Socket {
                     ws.emit('message-upsert' + conversationID, message);
                 }
             }
-        } else {
-            const phoneNumber = '+' + m.key.remoteJid?.split('@')[0]
-            if (phoneNumber == '+status') return
-            if(m.key.fromMe ===true)return
-            let existContact = await ContactModel.query.filter(ContactModel.c.phoneNumber.equalTo(phoneNumber)).fetchOneQuery()as ContactType
-            if (existContact) {
-                const inbox: InboxType = await InboxModel.query.filter(InboxModel.c.name.equalTo(this.folder)).fetchOneQuery<InboxType>()
-                const conversation: Omit<ConversationSchemaType, "id"> = {
-                    senderId: existContact.id,
-                    inboxId: inbox.id
-                }
-                await saveNewConversation(conversation)
-            }
-            else{
-        
-                const newContact: Omit<ContactType, 'id'> = {
-                    avatarUrl: '',
-                    labels: [],
-                    socialMedia: [],
-                    name: m.pushName!,
-                    phoneNumber
-                }
-                const resultContact = await saveNewContact(newContact)
-                const inbox: InboxType = await InboxModel.query.filter(InboxModel.c.name.equalTo(this.folder)).fetchOneQuery<InboxType>()
-                const conversation: Omit<ConversationSchemaType, "id"> = {
-                    senderId: resultContact.id,
-                    inboxId: inbox.id
-                }
-                await saveNewConversation(conversation)
-            }
-            await this.sendMessageorContact({ m, MEDIAMESSAGE })
-
         }
-        return
     }
     async messageUpsert({ messages, type }: { messages: proto.IWebMessageInfo[], type: MessageUpsertType }) {
         const MEDIAMESSAGE = ['audioMessage', 'imageMessage', 'videoMessage', 'documentMessage']
-        messages.forEach(async (m) => {
-            this.sendMessageorContact({ m, MEDIAMESSAGE })
-
-        })
-
+        for (const m of messages){
+            await this.sendMessageorContact({ m, MEDIAMESSAGE })
+        }
     }
 
     async sendMessage(phone: string, message: Omit<MessageType, "id">) {
@@ -317,6 +294,13 @@ class SocketPool {
     }
     getBaileysConnection(folder: string) {
         return this.pool.get(folder) as WhatsAppBaileysSocket | undefined
+    }
+    deleteConnection(conn:string | Socket){
+        if(conn instanceof Socket){
+            this.pool.delete(conn.folder)
+        } else {
+            this.pool.delete(conn)
+        }
     }
 
     createBaileysConnection(folder: string) {

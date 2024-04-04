@@ -25,7 +25,18 @@ export async function getInboxById(inboxId:InboxType["id"]){
     return await InboxModel.query.filter(InboxModel.c.id.equalTo(inboxId)).fetchOneQuery() as InboxType
 }
 
+export async  function getInboxByName(inboxName:string){
+    return await InboxModel.query.filter(InboxModel.c.name.equalTo(inboxName)).fetchOneQuery() as InboxType
+}
 export async function updateInbox(inbox:InboxType, newData:Partial<InboxType>){
     const newDataA = inboxSchema.omit({ id:true }).parse(newData)
     return await InboxModel.update.values(newDataA).filter(InboxModel.c.id.equalTo(inbox.id)).fetchOneQuery() as InboxType
+}
+export async function deleteInbox(inboxId:InboxType["id"]){
+    const inbox = await InboxModel.query.filter(InboxModel.c.id.equalTo(inboxId)).fetchOneQuery() as InboxType
+    const socketPool = SocketPool.getInstance()
+    const conn = socketPool.getOrCreateBaileysConnection(inbox.name)
+    conn.logout()
+    socketPool.deleteConnection(conn)
+    return InboxModel.delete.filter(InboxModel.c.id.equalTo(inboxId)).fetchAllQuery()
 }

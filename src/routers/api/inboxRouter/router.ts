@@ -1,5 +1,5 @@
 import { Handler, Router } from "express";
-import { getInboxById, getInboxes, saveNewInbox, updateInbox } from "../../../service/inboxService";
+import { deleteInbox, getInboxById, getInboxes, saveNewInbox, updateInbox } from "../../../service/inboxService";
 import { getInboxConversationAndContactById, getInboxConversations, saveNewConversation, updateInboxConversation } from "../../../service/conversationService";
 import { getMessageByConversation, saveNewMessageInConversation } from "../../../service/messageService";
 import { errorResponse } from "../../../service/errorService";
@@ -63,7 +63,23 @@ inboxRouter.route("/:id").all(getInboxMiddleware)
             return errorResponse(res, e)
         }
     })
-
+    .delete(async (req, res) =>{
+        try {
+            const inbox = deleteInbox(req.inbox.id)
+            res.json({ inbox })
+        } catch (e: any) {
+            return errorResponse(res, e)
+        }
+    })
+inboxRouter.route('/:id/log-out').all(getInboxMiddleware)
+    .post(async (req, res)=>{
+        const inbox = req.inbox
+        const conn = SocketPool.getInstance().getBaileysConnection(inbox.name)
+        if(conn){
+            await conn.logout()
+        }
+        res.json({ inbox })
+    })
 inboxRouter.route("/:id/conversation").all(getInboxMiddleware)
     .get(async (req, res) => {
         try {
