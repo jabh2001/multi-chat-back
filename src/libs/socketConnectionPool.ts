@@ -219,7 +219,6 @@ class WhatsAppBaileysSocket extends Socket {
             }
             else{
                 
-                return
                 const newContact: Omit<ContactType, 'id'> = {
                     avatarUrl: '',
                     labels: [],
