@@ -123,7 +123,8 @@ inboxRouter.route("/:id/conversation/:conversationId").all(getInboxMiddleware, g
 inboxRouter.route("/:id/conversation/:conversationId/message").all(getInboxMiddleware, getConversationMiddleware)
     .get(async (req, res) => {
         try {
-            res.json({ messages: await getMessageByConversation(req.params.conversationId) })
+            
+            res.json({ messages: await getMessageByConversation(req.params.conversationId, Number(req.query.offset)) })
         } catch (e: any) {
             return errorResponse(res, e)
         }

@@ -6,8 +6,9 @@ import { ContactType, ConversationType, InboxType, MessageType } from "../types"
 import { saveNewConversation } from "./conversationService";
 const sseClients = getClientList()
 
-export async function getMessageByConversation(conversationId:any){
-    return await MessageModel.query.filter(MessageModel.c.conversationId.equalTo(conversationId)).fetchAllQuery<MessageType>()
+export async function getMessageByConversation(conversationId:any, offset:number=0){
+    const query = MessageModel.query.filter(MessageModel.c.conversationId.equalTo(conversationId)).offset(offset).limit(20).order(MessageModel.c.id.desc())
+    return await query.fetchAllQuery<MessageType>()
 }
 export async function saveNewMessageInConversation(conversationId:any, message:any){
     

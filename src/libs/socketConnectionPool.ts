@@ -18,8 +18,15 @@ import { getInboxByName } from "../service/inboxService"
 
 
 const sseClients = getClientList()
-const QR_FOLDER = "./QRs"
-const SESSION_FOLDER = "./sessions"
+const QR_FOLDER = "./QRs" as const
+const SESSION_FOLDER = "./sessions" as const
+const MEDIA_MESSAGE =  {
+    audioMessage:'audioMessage',
+    imageMessage:'imageMessage',
+    videoMessage:'videoMessage',
+    documentMessage:'documentMessage'
+}
+const MEDIA_MESSAGE_SET = new Set(Object.values(MEDIA_MESSAGE))
 
 abstract class Socket {
     folder: string
@@ -147,35 +154,55 @@ class WhatsAppBaileysSocket extends Socket {
             });
         }
     }
+    async getBase64Buffer(m:proto.IWebMessageInfo):Promise<null | Base64Buffer> {
+        if(!m.message){
+            return null
+        }
+        const { message } = m
+        const { imageMessage, audioMessage, videoMessage, documentMessage, } = message
+        
+        if(Object.values({ imageMessage, audioMessage, videoMessage, documentMessage }).filter(v => v !== null).length == 0) {
+            return null
+        }
 
-    async sendMessageorContact({ m, MEDIAMESSAGE }: { m: proto.IWebMessageInfo, MEDIAMESSAGE: string[], }): Promise<void> {
+        try {
+            const ctx = { 
+                logger: this.sock.logger, 
+                reuploadRequest: this.sock.updateMediaMessage 
+            }
+            const buffer = await downloadMediaMessage(m, 'buffer', { }, ctx);
+            const base64Buffer:Base64Buffer = {
+                base64: buffer.toString('base64'),
+                tipo: "text"
+            }
+            if(imageMessage) {
+                base64Buffer.tipo = MEDIA_MESSAGE.imageMessage
+                base64Buffer.caption = imageMessage.caption
+            } else if (audioMessage) {
+                base64Buffer.tipo = MEDIA_MESSAGE.audioMessage
+                base64Buffer.caption = audioMessage.seconds?.toString()
+            } else if  (videoMessage) {
+                base64Buffer.tipo = MEDIA_MESSAGE.videoMessage
+            }else if  (documentMessage) {
+                base64Buffer.tipo = MEDIA_MESSAGE.documentMessage
+            }
+
+            return  base64Buffer
+        } catch (error) {
+            console.error('Error al descargar el medio:', error);
+            return null
+        }
+    }
+    async sendMessageorContact({ m }: { m: proto.IWebMessageInfo }): Promise<void> {
         const wss = getWss()
 
         if (!m.message) return
         if (m.key.remoteJid?.split('@')[1] === 'g.us') return
-        let base64Buffer: null | Base64Buffer = null
-        if (MEDIAMESSAGE.includes(Object.keys(m.message)[0])) {
-            try {
-                const buffer = await downloadMediaMessage(
-                    m,
-                    'buffer',
-                    {},
-                    {
-                        logger: this.sock.logger,
-                        reuploadRequest: this.sock.updateMediaMessage
-                    }
-                );
-                base64Buffer = {
-                    base64: buffer.toString('base64'),
-                    tipo: Object.keys(m.message)[0]
-                }
-            } catch (error) {
-                console.error('Error al descargar el medio:', error);
-            }
-        }
 
+        const base64Buffer =  await this.getBase64Buffer(m)
         const phoneNumber = '+' + m.key.remoteJid?.split('@')[0]
         const text = m.message?.conversation || m.message?.extendedTextMessage?.text
+
         const joinResult = (
             await ContactModel.query
                 .join(ContactModel.r.conversations, Join.INNER)
@@ -186,7 +213,6 @@ class WhatsAppBaileysSocket extends Socket {
 
         let result = joinResult[0];
         if(!result){
-            const phoneNumber = '+' + m.key.remoteJid?.split('@')[0]
             if (phoneNumber == '+status') return
             if(m.key.fromMe ===true)return
             const inbox = await getInboxByName(this.folder)
@@ -219,9 +245,8 @@ class WhatsAppBaileysSocket extends Socket {
         }
     }
     async messageUpsert({ messages, type }: { messages: proto.IWebMessageInfo[], type: MessageUpsertType }) {
-        const MEDIAMESSAGE = ['audioMessage', 'imageMessage', 'videoMessage', 'documentMessage']
         for (const m of messages){
-            await this.sendMessageorContact({ m, MEDIAMESSAGE })
+            await this.sendMessageorContact({ m })
         }
     }
 

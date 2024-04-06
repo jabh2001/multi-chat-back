@@ -67,5 +67,6 @@ export type WSMessageUpsertType = ContactType & {
 
 export type Base64Buffer= {
     base64:string |null,
-    tipo:string|null
+    tipo:string|null,
+    caption?:string|null
 }
