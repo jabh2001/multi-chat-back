@@ -14,7 +14,7 @@ import conversationRouter from "./conversationRouter"
 
 const authenticatedRoute = Router()
 
-// authenticatedRoute.use(isAuthenticatedMiddleware)
+authenticatedRoute.use(isAuthenticatedMiddleware)
 authenticatedRoute.use("/team", teamRouter)
 authenticatedRoute.use("/teams", teamRouter)
 
