@@ -1,5 +1,5 @@
 import { getClientList } from "../app";
-import { ConversationModel, InboxModel, MessageModel } from "../libs/models";
+import { ConversationModel, InboxModel, MessageModel, UserModel } from "../libs/models";
 import { messageSchema } from "../libs/schemas";
 import SocketPool from "../libs/socketConnectionPool";
 import { ContactType, ConversationType, InboxType, MessageType } from "../types";
@@ -7,7 +7,13 @@ import { saveNewConversation } from "./conversationService";
 const sseClients = getClientList()
 
 export async function getMessageByConversation(conversationId:any, offset:number=0){
-    const query = MessageModel.query.filter(MessageModel.c.conversationId.equalTo(conversationId)).offset(offset).limit(20).order(MessageModel.c.id.desc())
+    const query = (
+        MessageModel.query.filter(MessageModel.c.conversationId.equalTo(conversationId))
+        .join(UserModel, UserModel.c.id, MessageModel.c.senderId, "LEFT")
+        .offset(offset)
+        .limit(20)
+        .order(MessageModel.c.id.desc())
+    )
     return await query.fetchAllQuery<MessageType>()
 }
 export async function saveNewMessageInConversation(conversationId:any, message:any){
