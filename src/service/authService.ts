@@ -41,10 +41,15 @@ export const isAuthenticatedMiddleware = async (req:Request, res:Response, next:
     let jwt = getJWTTokenValue(token) as any
     if(!jwt) return res.status(401).json({ message : "You are not authenticated!" })
     const { userId } = jwt
-    req.identity = await getAgentById(userId)
-    token = createJWTToken(req.identity.id)
-    assignJWTTokenToCookies(res, token)
-    next()
+    try{
+        req.identity = await getAgentById(userId)
+        token = createJWTToken(req.identity.id)
+        assignJWTTokenToCookies(res, token)
+        next()
+    } catch(e){
+        res.status(401).json({ message : "Your token is invalid" })
+        return
+    }
 }
 export const isAdminMiddleware = async (req:Request, res:Response, next:NextFunction) =>{
     if(req.headers.authorization){
