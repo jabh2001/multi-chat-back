@@ -49,8 +49,9 @@ export default class WS {
             for (const m of list){
                 let wsMessage = {} as any
                 const buffer = Buffer.from(m.base64, 'base64');
-                message.buffer = m.base64
+                message.buffer = m.base64.split(",")[0]
                 if (m.tipo.match(/video*/)) {
+                    message.contentType = "video"
                     wsMessage = await baileys.sendMediaMessage(
                         contact.phoneNumber.split('+')[1],
                         {
@@ -59,6 +60,7 @@ export default class WS {
                         }
                     )
                 } else if (m.tipo.match(/image*/)) {
+                    message.contentType = "image"
                     wsMessage = await baileys.sendMediaMessage(
                         contact.phoneNumber.split('+')[1],
                         {
@@ -68,6 +70,7 @@ export default class WS {
                     )
 
                 } else if (m.tipo.match(/audio*/)) {
+                    message.contentType = "audio"
                     wsMessage = await baileys.sendMediaMessage(
                         contact.phoneNumber.split('+')[1],
                         {
@@ -75,6 +78,7 @@ export default class WS {
                         }
                     )
                 } else if (m.tipo.match(/document*/)) {
+                    message.contentType = "document"
                     wsMessage = contact.phoneNumber.split('+')[1],
                     {
                         document: buffer,
