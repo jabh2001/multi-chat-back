@@ -28,7 +28,14 @@ messageWsRouter.ws('/conversation/:id', async (ws, rq) => {
                 return 
             }
             const result = await WS.outgoingMessage(jsonData, baileys)
-            ws.send(JSON.stringify(result))
+            if(Array.isArray(result)){
+                for(const res of result){
+                    ws.send(JSON.stringify(res))
+                }
+            } else {
+
+                ws.send(JSON.stringify(result))
+            }
         } catch (error) {
             console.error("Error parsing JSON:", error);
         }
