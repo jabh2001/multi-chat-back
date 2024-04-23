@@ -4,6 +4,7 @@ import SocketPool from "../../libs/socketConnectionPool";
 import WS from "../../libs/websocket";
 import { getAsignedUserByIdSchema, getInboxConversationAndContactById, updateInboxConversation } from "../../service/conversationService";
 import { ConversationSchemaType } from "../../libs/schemas";
+import { getInboxByName } from "../../service/inboxService";
 
 const messageWsRouter = Router()
 
@@ -16,7 +17,8 @@ messageWsRouter.ws('/conversation/:id', async (ws, rq) => {
         try {
             const jsonData = JSON.parse(data.toString());
             if(jsonData.assignedUserId == null){
-                const conversation = await getAsignedUserByIdSchema(jsonData.inboxId, jsonData.contact.id) as any
+                const inbox = await getInboxByName(jsonData.inbox);
+                const conversation = await getAsignedUserByIdSchema(inbox.id, jsonData.contact.id) as any
                 conversation.assignedUserId = jsonData.user.id
                 console.log(conversation)
                 delete conversation.contact

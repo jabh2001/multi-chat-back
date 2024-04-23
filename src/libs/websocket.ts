@@ -37,13 +37,15 @@ export default class WS {
             content: data.message,
             private: true,
             messageType: "outgoing",
-            buffer: data.base64Buffer
+            buffer: data.base64Buffer,
+            listBufferBase64: data.listBufferBase64
         }
+        console.log(message)
         if (message.listBufferBase64 && message.listBufferBase64.length > 0) {
             message.listBufferBase64.forEach(async (m) => {
                 const buffer = Buffer.from(m.base64, 'base64');
-
-                if (m.tipo === 'video') {
+                console.log({ m })
+                if (m.tipo.match(/video*/)) {
                     await baileys.sendMessage(
                         contact.phoneNumber.split('+')[1],
                         {
@@ -51,8 +53,7 @@ export default class WS {
                             caption: m.caption || '',
                         }
                     )
-                }
-                else if (m.tipo === 'image') {
+                } else if (m.tipo.match(/image*/)) {
                     await baileys.sendMessage(
                         contact.phoneNumber.split('+')[1],
                         {
@@ -61,13 +62,14 @@ export default class WS {
                         }
                     )
 
-                } else if (m.tipo === 'audio') {
-                    contact.phoneNumber.split('+')[1],
-                    {
-                        audio: buffer,
-                    }
-                }
-                 else if (m.tipo === 'document') {
+                } else if (m.tipo.match(/audio*/)) {
+                    await baileys.sendMessage(
+                        contact.phoneNumber.split('+')[1],
+                        {
+                            audio: buffer,
+                        }
+                    )
+                } else if (m.tipo.match(/document*/)) {
                     contact.phoneNumber.split('+')[1],
                     {
                         document: buffer,
