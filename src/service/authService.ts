@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { getAgentById } from "./agentService";
+import { getAgentAndTeams, getAgentById } from "./agentService";
 
 const secret = process.env.JWT_SECRET_KEY as string
 const JWTCookieName = "jwt"
@@ -42,7 +42,7 @@ export const isAuthenticatedMiddleware = async (req:Request, res:Response, next:
     if(!jwt) return res.status(401).json({ message : "You are not authenticated!" })
     const { userId } = jwt
     try{
-        req.identity = await getAgentById(userId)
+        req.identity = await getAgentAndTeams(userId)
         token = createJWTToken(req.identity.id)
         assignJWTTokenToCookies(res, token)
         next()
