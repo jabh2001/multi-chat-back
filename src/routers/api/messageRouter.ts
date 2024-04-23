@@ -20,14 +20,13 @@ messageWsRouter.ws('/conversation/:id', async (ws, rq) => {
                 const inbox = await getInboxByName(jsonData.inbox);
                 const conversation = await getAsignedUserByIdSchema(inbox.id, jsonData.contact.id) as any
                 conversation.assignedUserId = jsonData.user.id
-                console.log(conversation)
                 delete conversation.contact
-                console.log(conversation)
                 await updateInboxConversation(conversation.id!, conversation)
-
-                
             }
             const baileys = poll.getBaileysConnection(jsonData.inbox)
+            if(!baileys){
+                return 
+            }
             const result = await WS.outgoingMessage(jsonData, baileys)
             ws.send(JSON.stringify(result))
         } catch (error) {

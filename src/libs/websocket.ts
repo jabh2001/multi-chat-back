@@ -2,6 +2,7 @@ import fs from 'fs'
 import { saveNewMessageInConversation } from "../service/messageService"
 import { AgentType, WSMessageUpsertType } from "../types"
 import { ContactType, MessageType } from "./schemas"
+import { WhatsAppBaileysSocket } from './socketConnectionPool'
 
 export default class WS {
 
@@ -24,7 +25,7 @@ export default class WS {
         const result = await saveNewMessageInConversation(data.conversation.id, message)
         return JSON.stringify(result)
     }
-    static async outgoingMessage(data: any, baileys: any) {
+    static async outgoingMessage(data: any, baileys: WhatsAppBaileysSocket) {
         const contact: ContactType = data.contact
         const user: AgentType = data.user
 
@@ -38,15 +39,19 @@ export default class WS {
             private: true,
             messageType: "outgoing",
             buffer: data.base64Buffer,
-            listBufferBase64: data.listBufferBase64
         }
-        console.log(message)
-        if (message.listBufferBase64 && message.listBufferBase64.length > 0) {
-            message.listBufferBase64.forEach(async (m) => {
+        if (data.listBufferBase64 !== undefined && Array.isArray(data.listBufferBase64) && data.listBufferBase64.length > 0) {
+            const list : MessageType["listBufferBase64"] = data.listBufferBase64
+            const returnedList:any[] = []
+            if(list === undefined){
+                return []
+            }
+            for (const m of list){
+                let wsMessage = {} as any
                 const buffer = Buffer.from(m.base64, 'base64');
-                console.log({ m })
+                message.buffer = m.base64
                 if (m.tipo.match(/video*/)) {
-                    await baileys.sendMessage(
+                    wsMessage = await baileys.sendMediaMessage(
                         contact.phoneNumber.split('+')[1],
                         {
                             video: buffer,
@@ -54,7 +59,7 @@ export default class WS {
                         }
                     )
                 } else if (m.tipo.match(/image*/)) {
-                    await baileys.sendMessage(
+                    wsMessage = await baileys.sendMediaMessage(
                         contact.phoneNumber.split('+')[1],
                         {
                             image: buffer,
@@ -63,25 +68,30 @@ export default class WS {
                     )
 
                 } else if (m.tipo.match(/audio*/)) {
-                    await baileys.sendMessage(
+                    wsMessage = await baileys.sendMediaMessage(
                         contact.phoneNumber.split('+')[1],
                         {
                             audio: buffer,
                         }
                     )
                 } else if (m.tipo.match(/document*/)) {
-                    contact.phoneNumber.split('+')[1],
+                    wsMessage = contact.phoneNumber.split('+')[1],
                     {
                         document: buffer,
                     }
                 }
-            })
+                message.whatsappId = wsMessage.key.id
+                const result = await saveNewMessageInConversation(conversationId, message)
+                returnedList.push({ ...result, user})
+            }
+            return returnedList
+        } else {
+            const wsMessage = await baileys?.sendMessage(contact.phoneNumber.split('+')[1], message)
+    
+            message.whatsappId = wsMessage.key.id
+            const result = await saveNewMessageInConversation(conversationId, message)
+            return { ...result, user }
         }
-        const wsMessage = await baileys?.sendMessage(contact.phoneNumber.split('+')[1], message)
-
-        message.whatsappId = wsMessage.key.id
-        const result = await saveNewMessageInConversation(conversationId, message)
-        return { ...result, user }
     }
     static async outgoingMessageFromWS(data: WSMessageUpsertType) {
         let buffer: undefined | string = undefined

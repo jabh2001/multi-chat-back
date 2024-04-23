@@ -1,4 +1,4 @@
-import makeWASocket, { DisconnectReason, MessageUpsertType, downloadMediaMessage, proto, useMultiFileAuthState } from "@whiskeysockets/baileys"
+import makeWASocket, { AnyMediaMessageContent, DisconnectReason, MessageUpsertType, downloadMediaMessage, proto, useMultiFileAuthState } from "@whiskeysockets/baileys"
 import { Boom } from "@hapi/boom"
 import pino from "pino"
 import qrcode from "qrcode"
@@ -73,7 +73,7 @@ abstract class Socket {
     }
     abstract sendMessage(phone: string, message: MessageType): void
 }
-class WhatsAppBaileysSocket extends Socket {
+export class WhatsAppBaileysSocket extends Socket {
     sock: any
     store:any
     saveCreds:any
@@ -246,7 +246,9 @@ class WhatsAppBaileysSocket extends Socket {
             await this.sendMessageorContact({ m })
         }
     }
-
+    async sendMediaMessage(phone: string, message: AnyMediaMessageContent) {
+        return await this.sock.sendMessage(`${phone}@s.whatsapp.net`, message);
+    }
     async sendMessage(phone: string, message: Omit<MessageType, "id">) {
         const mensaje = {
             text: message.content
