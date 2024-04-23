@@ -43,7 +43,7 @@ export default class WS {
             message.listBufferBase64.forEach(async (m) => {
                 const buffer = Buffer.from(m.base64, 'base64');
 
-                if (m.nombre === 'video') {
+                if (m.tipo === 'video') {
                     await baileys.sendMessage(
                         contact.phoneNumber.split('+')[1],
                         {
@@ -52,7 +52,7 @@ export default class WS {
                         }
                     )
                 }
-                else if (m.caption === 'image') {
+                else if (m.tipo === 'image') {
                     await baileys.sendMessage(
                         contact.phoneNumber.split('+')[1],
                         {
@@ -61,13 +61,13 @@ export default class WS {
                         }
                     )
 
-                } else if (m.caption === 'audio') {
+                } else if (m.tipo === 'audio') {
                     contact.phoneNumber.split('+')[1],
                     {
                         audio: buffer,
                     }
                 }
-                 else if (m.caption === 'document') {
+                 else if (m.tipo === 'document') {
                     contact.phoneNumber.split('+')[1],
                     {
                         document: buffer,

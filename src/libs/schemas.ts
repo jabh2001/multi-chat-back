@@ -50,7 +50,7 @@ export const conversationSchema = z.object({
 })
 
 const bufferItemSchema = z.object({
-    nombre: z.string(),
+    tipo: z.string(),
     base64: z.string(),
     caption: z.string()
 });
