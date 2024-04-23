@@ -25,7 +25,7 @@ export async function initDBClient(){
     await client.query(query);
     const result = await client.query(`SELECT * FROM public."user" where email = 'admin@admin.com' limit 1;`);
     if(!result.rowCount){
-      await saveNewAgent({ name:"admin", email:"admin@admin.com", role:"admin", password:process.env.USER_ADMIN_PASSWORD||'a super secret passwors'} as any);
+      await saveNewAgent({ name:"admin", email:"admin@admin.com", role:"admin", password:process.env.USER_ADMIN_PASSWORD||'a super secret password'} as any);
     }
 
   } catch(e){

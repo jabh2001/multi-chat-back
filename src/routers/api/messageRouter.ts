@@ -2,7 +2,8 @@ import { applyTo } from "../../app";
 import { Router } from "express";
 import SocketPool from "../../libs/socketConnectionPool";
 import WS from "../../libs/websocket";
-import { ContactType, WSMessageUpsertType } from "../../types";
+import { getAsignedUserByIdSchema, getInboxConversationAndContactById, updateInboxConversation } from "../../service/conversationService";
+import { ConversationSchemaType } from "../../libs/schemas";
 
 const messageWsRouter = Router()
 
@@ -14,6 +15,16 @@ messageWsRouter.ws('/conversation/:id', async (ws, rq) => {
     ws.on('message', async (data) => {
         try {
             const jsonData = JSON.parse(data.toString());
+            if(jsonData.assignedUserId == null){
+                const conversation = await getAsignedUserByIdSchema(jsonData.inboxId, jsonData.contact.id) as any
+                conversation.assignedUserId = jsonData.user.id
+                console.log(conversation)
+                delete conversation.contact
+                console.log(conversation)
+                await updateInboxConversation(conversation.id!, conversation)
+
+                
+            }
             const baileys = poll.getBaileysConnection(jsonData.inbox)
             const result = await WS.outgoingMessage(jsonData, baileys)
             ws.send(JSON.stringify(result))

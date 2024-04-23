@@ -104,6 +104,7 @@ contactRouter.route("/:id/labels")
  */
 contactRouter.post("/:id/message", getModelMiddleware, async (req, res) => {
     try {
+        console.log('id', req)
         const message = await sendMessageToContact(req.contact, req.body)
         res.json({ message })
     } catch (e) {

@@ -68,6 +68,11 @@ export async function getInboxConversationAndContactById(inboxId:any, conversati
 
     return await query.fetchOneQuery<ConversationType>()
 }
+export async function getAsignedUserByIdSchema(inboxId:any, conversationId:any){
+    const query = ConversationModel.query.filter(ConversationModel.c.inboxId.equalTo(inboxId), ConversationModel.c.id.equalTo(conversationId)).join(ConversationModel.r.sender, Join.INNER)
+
+    return await query.fetchOneQuery<ConversationSchemaType>()
+}
 
 export async function updateInboxConversation(conversationId:any, newData:any){
     return await ConversationModel.update.values(newData).filter(ConversationModel.c.id.equalTo(conversationId)).fetchOneQuery<ConversationType>()
