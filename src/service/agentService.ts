@@ -24,6 +24,17 @@ export const getAgentById:GetAgentByIdType = async (id) => {
     return userSchema.omit({ password:true }).parse(user) as any
 }
 
+export const getAgentAndTeams = async (id:number) =>{
+    const user = (
+        await UserModel.query
+        .select(UserModel.c.id, UserModel.c.name, UserModel.c.email, UserModel.c.role)
+        .filter(UserModel.c.id.equalTo(id))
+        .fetchOneQuery<AgentType>()
+    )
+    user.teams = await getAgentTeams(user)
+    return user
+}
+
 export const updateAgent:UpdateAgentType = async (agent, newAgent) => {
     const newData = userSchema.omit({ id:true }).partial().parse(newAgent)
     const user = await UserModel.update.values(newData).filter(UserModel.c.id.equalTo(agent.id)).fetchOneQuery()
@@ -51,21 +62,16 @@ export const updateAgentTeams:UpdateAgentTeamsType = async (agent, teams)=>{
 }
 
 export const verifyUser = async (email:string, password:string) => {
-    console.log({email, password})
     const res = await UserModel.query.filter(UserModel.c.email.equalTo(email)).fetchAllQuery()
     if(!res.length){
         throw new Error("Email or password incorrect")
     }
-    console.log('no entro')
     const [ user, _] = res as any
     if (!await bcrypt.compare(password, user.password)){
-        console.log('entró')
-        
-        console.log(await bcrypt.hash(password,10), user.password)
         throw new Error("Email or password incorrect")
     }
     // Remove password before sending back to client
-    return userSchema.omit({ password:true }).parse(user)
+    return await getAgentAndTeams(user.id)
 }
 
 type GetAgentsType = () => Promise<AgentType[]>
