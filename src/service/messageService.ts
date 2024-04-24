@@ -29,6 +29,7 @@ export async function getMessageByWhatsAppId(whatsAppId:string) {
 }
 
 export async function sendMessageToContact(contact:ContactType, { inboxName, message }:{ inboxName:string, message:string}){
+    
     const inbox = await InboxModel.query.filter(InboxModel.c.name.equalTo(inboxName)).fetchOneQuery<InboxType>()
     if(!inbox){
         throw new Error("No inbox found")

@@ -2,7 +2,9 @@ import { applyTo } from "../../app";
 import { Router } from "express";
 import SocketPool from "../../libs/socketConnectionPool";
 import WS from "../../libs/websocket";
-import { ContactType, WSMessageUpsertType } from "../../types";
+import { getAsignedUserByIdSchema, getInboxConversationAndContactById, updateInboxConversation } from "../../service/conversationService";
+import { ConversationSchemaType } from "../../libs/schemas";
+import { getInboxByName } from "../../service/inboxService";
 
 const messageWsRouter = Router()
 
@@ -14,9 +16,26 @@ messageWsRouter.ws('/conversation/:id', async (ws, rq) => {
     ws.on('message', async (data) => {
         try {
             const jsonData = JSON.parse(data.toString());
+            if(jsonData.assignedUserId == null){
+                const inbox = await getInboxByName(jsonData.inbox);
+                const conversation = await getAsignedUserByIdSchema(inbox.id, jsonData.contact.id) as any
+                conversation.assignedUserId = jsonData.user.id
+                delete conversation.contact
+                await updateInboxConversation(conversation.id!, conversation)
+            }
             const baileys = poll.getBaileysConnection(jsonData.inbox)
+            if(!baileys){
+                return 
+            }
             const result = await WS.outgoingMessage(jsonData, baileys)
-            ws.send(JSON.stringify(result))
+            if(Array.isArray(result)){
+                for(const res of result){
+                    ws.send(JSON.stringify(res))
+                }
+            } else {
+
+                ws.send(JSON.stringify(result))
+            }
         } catch (error) {
             console.error("Error parsing JSON:", error);
         }

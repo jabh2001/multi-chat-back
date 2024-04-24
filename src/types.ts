@@ -63,6 +63,7 @@ export type WSMessageUpsertType = ContactType & {
     text:string | null | undefined 
     fromMe:boolean
     messageID:string
+    listBufferBase64?: Base64Buffer[]
 }
 
 export type Base64Buffer= {

@@ -49,21 +49,26 @@ export const conversationSchema = z.object({
     assignedTeamId:z.number().positive().optional(),
 })
 
+const bufferItemSchema = z.object({
+    tipo: z.string(),
+    base64: z.string(),
+    caption: z.string()
+});
 export const messageSchema = z.object({
-    id:z.number().positive(),
-    buffer:z.string().optional(),
-    bufferType:z.string().optional(),
-    conversationId:z.number().positive(),
-    senderId:z.number().positive().optional(),
-    content:z.string().optional(),
-    whatsappId:z.string(),
-    status:z.boolean().optional(),
-    contentType:z.string(),
-    messageType:z.enum(["incoming", "outgoing"]),
-    private:z.boolean().default(false),
-    createdAt:z.date().optional(),
-})      
-
+    id: z.number().positive(),
+    buffer: z.string().optional(), 
+    bufferType: z.string().optional(),
+    conversationId: z.number().positive(),
+    senderId: z.number().positive().optional(),
+    content: z.string().optional(),
+    whatsappId: z.string(),
+    status: z.boolean().optional(),
+    contentType: z.string(),
+    messageType: z.enum(["incoming", "outgoing"]),
+    private: z.boolean().default(false),
+    createdAt: z.date().optional(),
+    listBufferBase64:z.array(bufferItemSchema).optional()
+});
 
 
 
