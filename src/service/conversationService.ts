@@ -68,8 +68,8 @@ export async function getInboxConversationAndContactById(inboxId:any, conversati
 
     return await query.fetchOneQuery<ConversationType>()
 }
-export async function getAsignedUserByIdSchema(inboxId:any, conversationId:any){
-    const query = ConversationModel.query.filter(ConversationModel.c.inboxId.equalTo(inboxId), ConversationModel.c.id.equalTo(conversationId)).join(ConversationModel.r.sender, Join.INNER)
+export async function getAsignedUserByIdSchema(inboxId:any, contactId:any){
+    const query = ConversationModel.query.filter(ConversationModel.c.inboxId.equalTo(inboxId), ContactModel.c.id.equalTo(contactId)).join(ConversationModel.r.sender, Join.INNER)
 
     return await query.fetchOneQuery<ConversationSchemaType>()
 }
