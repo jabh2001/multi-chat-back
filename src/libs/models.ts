@@ -130,4 +130,6 @@ export {
     InboxModel,
     ConversationModel,
     MessageModel,
+    FastMessage,
+    FastMediaMessage
 }
