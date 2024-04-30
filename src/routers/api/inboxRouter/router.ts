@@ -1,11 +1,11 @@
 import { Handler, Router } from "express";
 import { deleteInbox, getInboxById, getInboxes, saveNewInbox, updateInbox } from "../../../service/inboxService";
 import { getInboxConversationAndContactById, getInboxConversations, saveNewConversation, updateInboxConversation } from "../../../service/conversationService";
-import { getMessageByConversation, saveNewMessageInConversation } from "../../../service/messageService";
+import { getMessageByConversation } from "../../../service/messageService";
 import { errorResponse } from "../../../service/errorService";
 import SocketPool from "../../../libs/socketConnectionPool";
-import client from "../../../libs/dataBase";
-import { ContactModel, ConversationModel } from "../../../libs/models";
+import {  ConversationModel } from "../../../libs/models";
+import { deleteConversationNote, getConversationNoteById, getConversationNotes, saveNewConversationNote, updateConversationNote } from "../../../service/notesService";
 
 const inboxRouter = Router()
 
@@ -75,10 +75,14 @@ inboxRouter.route('/:id/log-out').all(getInboxMiddleware)
     .post(async (req, res)=>{
         const inbox = req.inbox
         const conn = SocketPool.getInstance().getBaileysConnection(inbox.name)
-        if(conn){
-            await conn.logout()
+        try {
+            if(conn){
+                await conn.logout()
+            }
+            res.json({ inbox })
+        } catch (e: any) {
+            return errorResponse(res, e)
         }
-        res.json({ inbox })
     })
 inboxRouter.route("/:id/conversation").all(getInboxMiddleware)
     .get(async (req, res) => {
@@ -129,17 +133,6 @@ inboxRouter.route("/:id/conversation/:conversationId/message").all(getInboxMiddl
             return errorResponse(res, e)
         }
     })
-    .post(async (req, res) => {
-        try {
-            // const message = await saveNewMessageInConversation(req.params.conversationId, { ...req.body }) 
-            // if(!message){
-            //     res.json({})
-            // }
-            res.json({ })
-        } catch (e: any) {
-            return errorResponse(res, e)
-        }
-    })
 inboxRouter.put("/:id/conversation/:conversationId/send-message", getInboxMiddleware, getConversationMiddleware, async (req, res) => {
     try {
         const connection = SocketPool.getInstance().getBaileysConnection(req.inbox.name)
@@ -148,6 +141,49 @@ inboxRouter.put("/:id/conversation/:conversationId/send-message", getInboxMiddle
         return errorResponse(res, e)
     }
 })
+
+inboxRouter.route("/:id/conversation/:conversationId/notes").all(getInboxMiddleware, getConversationMiddleware)
+    .get(async (req, res) => {
+        try {
+            
+            res.json({ notes: await getConversationNotes(Number(req.params.conversationId)) })
+        } catch (e: any) {
+            return errorResponse(res, e)
+        }
+    })
+    .post(async (req, res) => {
+        try {
+            
+            res.json({ note: await saveNewConversationNote({ ...req.body, conversationId:Number(req.params.conversationId)}) })
+        } catch (e: any) {
+            return errorResponse(res, e)
+        }
+    })
+inboxRouter.route("/:id/conversation/:conversationId/notes/:noteId").all(getInboxMiddleware, getConversationMiddleware)
+    .get(async (req, res) => {
+        try {
+            
+            res.json({ note: await getConversationNoteById(Number(req.params.noteId)) })
+        } catch (e: any) {
+            return errorResponse(res, e)
+        }
+    })
+    .put(async (req, res) => {
+        try {
+            const oldNote = await getConversationNoteById(Number(req.params.noteId)) as any
+            res.json({ note: await updateConversationNote(oldNote, { ...req.body, conversationId:Number(req.params.conversationId)}) })
+        } catch (e: any) {
+            return errorResponse(res, e)
+        }
+    })
+    .delete(async (req, res) => {
+        try {
+            const oldNote = await getConversationNoteById(Number(req.params.noteId)) as any
+            res.json({ note: await deleteConversationNote( oldNote) })
+        } catch (e: any) {
+            return errorResponse(res, e)
+        }
+    })
 
 
 export default inboxRouter

@@ -1,11 +1,11 @@
-import { applyTo } from "../../app";
+import { applyTo, getClientList } from "../../app";
 import { Router } from "express";
 import SocketPool from "../../libs/socketConnectionPool";
 import WS from "../../libs/websocket";
-import { getAsignedUserByIdSchema, getInboxConversationAndContactById, updateInboxConversation } from "../../service/conversationService";
-import { ConversationSchemaType } from "../../libs/schemas";
+import { getAsignedUserByIdSchema, updateInboxConversation } from "../../service/conversationService";
 import { getInboxByName } from "../../service/inboxService";
 
+const clients = getClientList()
 const messageWsRouter = Router()
 
 messageWsRouter.ws('/conversation/:id', async (ws, rq) => {
@@ -22,6 +22,8 @@ messageWsRouter.ws('/conversation/:id', async (ws, rq) => {
                 conversation.assignedUserId = jsonData.user.id
                 delete conversation.contact
                 await updateInboxConversation(conversation.id!, conversation)
+                clients.emitToClients("update-conversation", conversation)
+
             }
             const baileys = poll.getBaileysConnection(jsonData.inbox)
             if(!baileys){
