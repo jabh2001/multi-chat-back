@@ -40,7 +40,6 @@ messageWsRouter.ws('/conversation/:id', async (ws, rq) => {
             console.error("Error parsing JSON:", error);
         }
     });
-    // { ...result, text, fromMe, messageID:m.key.id }
     ws.on('message-upsert'+rq.params.id,async(data: string)=>{
         ws.send(data)   
     })

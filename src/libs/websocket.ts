@@ -48,7 +48,12 @@ export default class WS {
             }
             for (const m of list){
                 let wsMessage = {} as any
-                const buffer = Buffer.from(m.base64, 'base64');
+                const bufferSinComa = m.base64.split(',')[1]
+                const buffer = Buffer.from(bufferSinComa, 'base64');
+                const bufferJSon = JSON.stringify(buffer)
+                const bufferOtro = fs.readFileSync("C:\\Users\\usuario\\Downloads\\imagenes-de-usuario.png")
+                const otroBufferJson = JSON.stringify(bufferOtro)
+                console.log('este es el buffer', JSON.stringify(buffer))
                 message.buffer = m.base64.split(",")[1]
                 if (m.tipo.match(/video*/)) {
                     message.contentType = "videoMessage"

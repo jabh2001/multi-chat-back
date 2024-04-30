@@ -99,6 +99,24 @@ const MessageModel = (
     ])
 )
 
+const FastMessage=(
+    new Model("fastMessage",[
+        new SerialColumn("id", true),
+        new StringColumn("title"),
+        new IntColumn("admin_id",),
+        new StringColumn("keyWords")
+    ])
+    
+)
+const FastMediaMessage = (
+    new Model("fastMediaMEssage", [
+        new SerialColumn("id", true),
+        new IntColumn("mediaMessageID", 0, {foreign:FastMessage.c.id,nullable:true}),
+        new StringColumn("message_type"),
+        new StringColumn("base64"),
+        new IntColumn("order")
+    ])
+)
 export {
     Column,
     Model,

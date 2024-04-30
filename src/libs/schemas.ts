@@ -70,7 +70,24 @@ export const messageSchema = z.object({
     listBufferBase64:z.array(bufferItemSchema).optional()
 });
 
-
+export const fastMessageSchema = z.object(
+    {
+        id: z.number().positive(),  
+        title: z.string(),
+        admin: z.number().positive(),
+        keyWords: z.string()
+    }
+)
+export const fastMediaMesaggeSchema = z.object(
+    {
+        id:z.number().positive(),
+        fastMesagge: fastMessageSchema,
+        text:z.string(),
+        message_type:z.string(),
+        base64: z.string(),
+        order:z.number(),
+    }
+)
 
 export type UserType = z.infer<typeof userSchema>
 export type LabelType = z.infer<typeof labelSchema>
