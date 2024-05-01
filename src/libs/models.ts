@@ -99,20 +99,21 @@ const MessageModel = (
     ])
 )
 
-const FastMessage=(
+const FastMessageModel =(
     new Model("fastMessage",[
         new SerialColumn("id", true),
         new StringColumn("title"),
-        new IntColumn("admin_id",),
+        new IntColumn("adminId", 0, { foreign:UserModel.c.id, nullable:true }),
         new StringColumn("keyWords")
     ])
     
 )
-const FastMediaMessage = (
+const FastMediaMessageModel = (
     new Model("fastMediaMEssage", [
         new SerialColumn("id", true),
-        new IntColumn("mediaMessageID", 0, {foreign:FastMessage.c.id,nullable:true}),
-        new StringColumn("message_type"),
+        new IntColumn("fastMessageId", 0, {foreign:FastMessageModel.c.id,nullable:false}),
+        new StringColumn("text"),
+        new StringColumn("messageType"),
         new StringColumn("base64"),
         new IntColumn("order")
     ])
@@ -130,6 +131,6 @@ export {
     InboxModel,
     ConversationModel,
     MessageModel,
-    FastMessage,
-    FastMediaMessage
+    FastMessageModel,
+    FastMediaMessageModel
 }

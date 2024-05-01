@@ -70,22 +70,24 @@ export const messageSchema = z.object({
     listBufferBase64:z.array(bufferItemSchema).optional()
 });
 
+export const fastMediaMessageSchema = z.object(
+    {
+        id:z.number().positive(),
+        fastMessageId: z.number().positive(),
+        text:z.string(),
+        messageType:z.string(),
+        base64: z.string(),
+        order:z.number(),
+    }
+)
 export const fastMessageSchema = z.object(
     {
         id: z.number().positive(),  
         title: z.string(),
-        admin: z.number().positive(),
-        keyWords: z.string()
-    }
-)
-export const fastMediaMesaggeSchema = z.object(
-    {
-        id:z.number().positive(),
-        fastMesagge: fastMessageSchema,
-        text:z.string(),
-        message_type:z.string(),
-        base64: z.string(),
-        order:z.number(),
+        adminId: z.number().positive(),
+        keyWords: z.string(),
+        admin: userSchema.optional(),
+        messages: z.array(fastMediaMessageSchema).optional(),
     }
 )
 
@@ -97,3 +99,5 @@ export type SocialMediaType = z.infer<typeof socialMediaSchema>
 export type InboxType = z.infer<typeof inboxSchema>
 export type ConversationSchemaType = z.infer<typeof conversationSchema>
 export type MessageType = z.infer<typeof messageSchema>
+export type FastMessageType = z.infer<typeof fastMessageSchema>
+export type FastMediaMessageType = z.infer<typeof fastMediaMessageSchema>
