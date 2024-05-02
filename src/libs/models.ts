@@ -118,6 +118,17 @@ const FastMediaMessageModel = (
         new IntColumn("order")
     ])
 )
+const ConversationNoteModel = (
+    new Model("conversation_notes", [
+        new SerialColumn("id", true),
+        new IntColumn("userId", 0, { foreign:UserModel.c.id, nullable:true, relation:{name:"user", backRef:"notes"} }),
+        new IntColumn("conversationId", 0, { foreign:ConversationModel.c.id, nullable:false, relation:{name:"conversation", backRef:"notes"} }),
+        new StringColumn('content'),
+        new BooleanColumn('important', false),
+        new TimeStampColumn("createdAt"),
+    ])
+)
+
 export {
     Column,
     Model,
@@ -132,5 +143,6 @@ export {
     ConversationModel,
     MessageModel,
     FastMessageModel,
-    FastMediaMessageModel
+    FastMediaMessageModel,
+    ConversationNoteModel,
 }

@@ -90,6 +90,15 @@ export const fastMessageSchema = z.object(
         messages: z.array(fastMediaMessageSchema).optional(),
     }
 )
+export const conversationNoteSchema = z.object({
+    id: z.number().positive(),
+    userId: z.number().positive(), 
+    conversationId: z.number().positive(),
+    content: z.string(),
+    important: z.boolean(),
+    createdAt: z.date().optional(),
+});
+
 
 export type UserType = z.infer<typeof userSchema>
 export type LabelType = z.infer<typeof labelSchema>
@@ -101,3 +110,4 @@ export type ConversationSchemaType = z.infer<typeof conversationSchema>
 export type MessageType = z.infer<typeof messageSchema>
 export type FastMessageType = z.infer<typeof fastMessageSchema>
 export type FastMediaMessageType = z.infer<typeof fastMediaMessageSchema>
+export type ConversationNoteType = z.infer<typeof conversationNoteSchema>
