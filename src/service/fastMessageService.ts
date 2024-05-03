@@ -6,7 +6,7 @@ export const getFastMessages = async () => {
     return await FastMessageModel.query.fetchAllQuery<FastMessageType>()
 }
 
-export const saveNewFastMessage = async (newFastMessage:FastMediaMessageType) => {
+export const saveNewFastMessage = async (newFastMessage:FastMessageType) => {
     const newData = fastMessageSchema.omit({ id:true }).parse(newFastMessage)
     const fastMessage = await FastMessageModel.insert.value(newData).fetchOneQuery<FastMessageType>()
     // sseClients.emitToClients("insert-fastMessage", fastMessage)
@@ -26,6 +26,7 @@ export const updateFastMessage = async (id:FastMessageType["id"], newFastMessage
     // sseClients.emitToClients("update-fastMessage", fastMessage)
     return fastMessage
 }
+
 export const deleteFastMessage = async (id:FastMessageType["id"]) => {
     const fastMessage = await FastMessageModel.delete.filter(FastMessageModel.c.id.equalTo(id)).fetchOneQuery<FastMessageType>()
     // sseClients.emitToClients('delete-fastMessage', [id])

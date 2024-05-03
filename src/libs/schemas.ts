@@ -87,7 +87,6 @@ export const fastMessageSchema = z.object(
         adminId: z.number().positive(),
         keyWords: z.string(),
         admin: userSchema.optional(),
-        messages: z.array(fastMediaMessageSchema).optional(),
     }
 )
 
