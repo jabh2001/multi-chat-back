@@ -103,6 +103,7 @@ const FastMessageModel =(
     new Model("fastMessage",[
         new SerialColumn("id", true),
         new StringColumn("title"),
+        new StringColumn("text"),
         new IntColumn("adminId", 0, { foreign:UserModel.c.id, nullable:true }),
         new StringColumn("keyWords")
     ])

@@ -14,8 +14,8 @@ import {
 
 const fastRouter = Router();
 
-fastRouter.get('/', (req, res) => {
-    const messages = getFastMessages();
+fastRouter.get('/', async (req, res) => {
+    const messages = await getFastMessages();
     res.json(messages);
 });
 
