@@ -1,72 +1,108 @@
 import { Router } from "express";
 import { FastMessageType } from "../../libs/schemas";
-import { 
-  getFastMessages, 
-  saveNewFastMessage, 
-  updateFastMessage, 
-  deleteFastMessage,
-  getFastMediaMessages,
-  saveNewFastMediaMessage,
-  getFastMediaMessageById,
-  updateFastMediaMessage,
-  deleteFastMediaMessage
+import {
+    getFastMessages,
+    saveNewFastMessage,
+    updateFastMessage,
+    deleteFastMessage,
+    getFastMediaMessages,
+    saveNewFastMediaMessage,
+    getFastMediaMessageById,
+    updateFastMediaMessage,
+    deleteFastMediaMessage
 } from "../../service/fastMessageService";
+import { errorResponse } from "../../service/errorService";
 
 const fastRouter = Router();
 
-fastRouter.get('/', async (req, res) => {
-    const messages = await getFastMessages();
-    res.json(messages);
-});
+fastRouter.route("/")
+    .get(async (req, res) => {
+        try {
+            const fastMessages = await getFastMessages();
+            return res.json({ fastMessages });
+        } catch (e) {
+            return errorResponse(res, e)
+        }
+    })
+    .post(async (req, res) => {
+        try {
+            const fastMessage = await saveNewFastMessage(req.body);
+            res.json({ fastMessage });
+        } catch (e) {
+            return errorResponse(res, e)
+        }
+    })
 
-fastRouter.post('/', (req, res) => { 
-    saveNewFastMessage(req.body);
-    res.json(req.body);
-});
+fastRouter.route("/:id")
+    .put(async (req, res) => {
+        try {
+            const body: FastMessageType = req.body;
+            const fastMessages = await updateFastMessage(parseInt(req.params.id), body);
+            return res.json({ fastMessages });
+        } catch (e) {
+            return errorResponse(res, e)
+        }
+    })
+    .delete(async (req, res) => {
+        try {
+            deleteFastMessage(parseInt(req.params.id));
+            res.json({ message: 'Mensaje eliminado exitosamente' });
+        } catch (e) {
+            return errorResponse(res, e)
+        }
+    })
+fastRouter.route("/media")
+    .get(async (req, res) => {
+        try {
+            const fastMediaMessages = await getFastMediaMessages();
+            res.json({ fastMediaMessages });
+        } catch (e) {
+            return errorResponse(res, e)
+        }
+    })
+    .post(async (req, res) => {
+        try {
+            const newMediaMessage = req.body;
+            const savedFastMediaMessage = await saveNewFastMediaMessage(newMediaMessage);
+            res.json({ savedFastMediaMessage });
+        } catch (e) {
+            return errorResponse(res, e)
+        }
+    })
 
-fastRouter.put('/:id', (req, res) => {
-    const body : FastMessageType = req.body;
-    updateFastMessage(parseInt(req.params.id), body);
-    res.json(body);
-});
 
-fastRouter.delete('/:id', (req, res) => {
-    deleteFastMessage(parseInt(req.params.id));
-    res.json({ message: 'Mensaje eliminado exitosamente' });
-});
-
-fastRouter.get('/media', async (req, res) => {
-    const mediaMessages = await getFastMediaMessages();
-    res.json(mediaMessages);
-});
-
-fastRouter.post('/media', async (req, res) => { 
-    const newMediaMessage = req.body;
-    const savedMediaMessage = await saveNewFastMediaMessage(newMediaMessage);
-    res.json(savedMediaMessage);
-});
-
-fastRouter.get('/media/:id', async (req, res) => {
-    const { id } = req.params;
-    const mediaMessage = await getFastMediaMessageById(parseInt(id));
-    if (mediaMessage) {
-        res.json(mediaMessage);
-    } else {
-        res.status(404).json({ message: 'Mensaje de media no encontrado' });
-    }
-});
-
-fastRouter.put('/media/:id', async (req, res) => {
-    const { id } = req.params;
-    const updatedMediaMessage = req.body;
-    const result = await updateFastMediaMessage(parseInt(id), updatedMediaMessage);
-    res.json(result);
-});
-
-fastRouter.delete('/media/:id', async (req, res) => {
-    const { id } = req.params;
-    await deleteFastMediaMessage(parseInt(id));
-    res.json({ message: 'Mensaje de media eliminado exitosamente' });
-});
+fastRouter.route("/media/:id")
+    .get(async (req, res) => {
+        try {
+            const { id } = req.params;
+            const fastMediaMessages = await getFastMediaMessageById(parseInt(id));
+            if (fastMediaMessages) {
+                res.json({ fastMediaMessages });
+            } else {
+                res.status(404).json({ message: 'Mensaje de media no encontrado' });
+            }
+        } catch (e) {
+            return errorResponse(res, e)
+        }
+    })
+    .put(async (req, res) => {
+        try {
+            const { id } = req.params;
+            const updatedMediaMessage = req.body;
+            const fastMediaMessages = await updateFastMediaMessage(parseInt(id), updatedMediaMessage);
+            res.json({ fastMediaMessages });
+        } catch (e) {
+            return errorResponse(res, e)
+        }
+    })
+    .delete(async (req, res) => {
+        try {
+            const { id } = req.params;
+            await deleteFastMediaMessage(parseInt(id));
+            res.json({ message: 'Mensaje de media eliminado exitosamente' });
+        } catch (e) {
+            return errorResponse(res, e)
+        }
+    })
 
 export default fastRouter;
