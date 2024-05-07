@@ -10,6 +10,7 @@ import authRouter from "./authRouter"
 import { UserType } from "../../libs/schemas"
 import { isAuthenticatedMiddleware } from "../../service/authService"
 import conversationRouter from "./conversationRouter"
+import fastRouter from "./fastMessageRouter"
 
 
 const authenticatedRoute = Router()
@@ -33,6 +34,9 @@ authenticatedRoute.use("/inboxes", inboxRouter)
 
 authenticatedRoute.use("/conversation", conversationRouter)
 authenticatedRoute.use("/conversations", conversationRouter)
+
+authenticatedRoute.use("/fastMessages", fastRouter)
+
 
 const apiRouter = Router()
 apiRouter.use(authRouter)
