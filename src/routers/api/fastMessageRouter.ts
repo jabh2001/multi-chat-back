@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { FastMessageType } from "../../libs/schemas";
+import { FastMediaMessageType, FastMessageType } from "../../libs/schemas";
 import {
     getFastMessages,
     saveNewFastMessage,
@@ -15,6 +15,10 @@ import { errorResponse } from "../../service/errorService";
 
 const fastRouter = Router();
 
+interface Body{
+    fastMessage:FastMessageType,
+    fastMedia: FastMediaMessageType[]
+}
 fastRouter.route("/")
     .get(async (req, res) => {
         try {
@@ -25,9 +29,10 @@ fastRouter.route("/")
         }
     })
     .post(async (req, res) => {
+        const body :Body = req.body
         try {
-            const fastMessage = await saveNewFastMessage(req.body);
-            res.json({ fastMessage });
+            const data = await saveNewFastMessage(body.fastMessage, {fastMedia:body.fastMedia});
+            res.json({ ...data });
         } catch (e) {
             return errorResponse(res, e)
         }
@@ -36,8 +41,9 @@ fastRouter.route("/")
 fastRouter.route("/:id")
     .put(async (req, res) => {
         try {
-            const body: FastMessageType = req.body;
-            const fastMessages = await updateFastMessage(parseInt(req.params.id), body);
+            const body: Body = req.body;
+        
+            const fastMessages = await updateFastMessage(parseInt(req.params.id), body.fastMessage, {fastMediaMessage:body.fastMedia});
             return res.json({ fastMessages });
         } catch (e) {
             return errorResponse(res, e)

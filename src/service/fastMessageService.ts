@@ -6,11 +6,25 @@ export const getFastMessages = async () => {
     return await FastMessageModel.query.fetchAllQuery<FastMessageType>()
 }
 
-export const saveNewFastMessage = async (newFastMessage:FastMessageType) => {
+export const saveNewFastMessage = async (newFastMessage:FastMessageType,{ fastMedia}:{fastMedia?:FastMediaMessageType[]}={}) => {
+    interface Data {
+        fastMessage: FastMessageType;
+        newFastMediaMessagge?: FastMediaMessageType[];
+    }
     const newData = fastMessageSchema.omit({ id:true }).parse(newFastMessage)
+
     const fastMessage = await FastMessageModel.insert.value(newData).fetchOneQuery<FastMessageType>()
-    // sseClients.emitToClients("insert-fastMessage", fastMessage)
-    return fastMessage
+    let data:Data = {fastMessage,newFastMediaMessagge:[]}
+    if(fastMedia && fastMedia.length>0){
+        for (const media of fastMedia) {
+            media.fastMessageId = fastMessage.id;
+            const mediaData = fastMediaMessageSchema.omit({ id: true }).parse(media);
+            const newFastMediaMessagge = await FastMediaMessageModel.insert.value(mediaData).fetchOneQuery<FastMediaMessageType>();
+            data.newFastMediaMessagge!.push(newFastMediaMessagge)
+        }
+    }
+    
+    return data
 }
 export const getFastMessageById = async (id:FastMessageType["id"]) => {
     return (
@@ -20,11 +34,24 @@ export const getFastMessageById = async (id:FastMessageType["id"]) => {
         .fetchOneQuery<FastMessageType>()
     )
 }
-export const updateFastMessage = async (id:FastMessageType["id"], newFastMessage:Partial<FastMessageType>) => {
+export const updateFastMessage = async (id:FastMessageType["id"], newFastMessage:Partial<FastMessageType>, {fastMediaMessage}:{fastMediaMessage?:FastMediaMessageType[]}={}) => {
+    interface Data {
+        fastMessage: FastMessageType;
+        newFastMediaMessagge?: FastMediaMessageType[];
+    }
     const newData = fastMessageSchema.omit({ id:true }).parse(newFastMessage)
+
     const fastMessage = await FastMessageModel.update.values(newData).filter(FastMessageModel.c.id.equalTo(id)).fetchOneQuery<FastMessageType>()
-    // sseClients.emitToClients("update-fastMessage", fastMessage)
-    return fastMessage
+    let data:Data = {fastMessage,newFastMediaMessagge:[]}
+    
+    if(fastMediaMessage && fastMediaMessage?.length>0){
+        for(const media of fastMediaMessage){
+            const mediaData = fastMediaMessageSchema.omit({id:true}).parse(media)
+            const updatedMedia = await FastMediaMessageModel.update.values(mediaData).filter(FastMediaMessageModel.c.id.equalTo(media.id)).fetchOneQuery<FastMediaMessageType>()
+            data.newFastMediaMessagge?.push(updatedMedia)
+        }
+    }
+    return data
 }
 
 export const deleteFastMessage = async (id:FastMessageType["id"]) => {
