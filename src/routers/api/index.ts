@@ -35,7 +35,7 @@ authenticatedRoute.use("/inboxes", inboxRouter)
 authenticatedRoute.use("/conversation", conversationRouter)
 authenticatedRoute.use("/conversations", conversationRouter)
 
-authenticatedRoute.use("/fastMessages", fastRouter)
+authenticatedRoute.use("/fast-message", fastRouter)
 
 
 const apiRouter = Router()
