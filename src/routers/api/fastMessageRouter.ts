@@ -12,13 +12,23 @@ import {
     deleteFastMediaMessage
 } from "../../service/fastMessageService";
 import { errorResponse } from "../../service/errorService";
+import { getClientList } from "../../app";
+import SocketPool from "../../libs/socketConnectionPool";
 
+const clients = getClientList()
 const fastRouter = Router();
 
 interface Body{
     fastMessage:FastMessageType,
     fastMediaMessage: FastMediaMessageType[]
 }
+
+fastRouter.ws('/send/:id_inbox', async(ws, rq)=>{
+    const poll = SocketPool.getInstance()
+
+    const baileys = poll.getBaileysConnection(rq.params.id_inbox)
+
+})
 fastRouter.route("/")
     .get(async (req, res) => {
         try {

@@ -1,7 +1,7 @@
 import fs from 'fs'
 import { saveNewMessageInConversation } from "../service/messageService"
 import { AgentType, WSMessageUpsertType } from "../types"
-import { ContactType, MessageType } from "./schemas"
+import { ContactType, FastMediaMessageType, MessageType } from "./schemas"
 import { WhatsAppBaileysSocket } from './socketConnectionPool'
 
 export default class WS {
@@ -30,6 +30,7 @@ export default class WS {
         const user: AgentType = data.user
 
         const conversationId = data.conversationId
+
         let message: Omit<MessageType, "id"> = {
             senderId: data.sender,
             whatsappId: '',
@@ -41,18 +42,15 @@ export default class WS {
             buffer: data.base64Buffer,
         }
         if (data.listBufferBase64 !== undefined && Array.isArray(data.listBufferBase64) && data.listBufferBase64.length > 0) {
-            const list : MessageType["listBufferBase64"] = data.listBufferBase64
-            const returnedList:any[] = []
-            if(list === undefined){
+            const list: MessageType["listBufferBase64"] = data.listBufferBase64
+            const returnedList: any[] = []
+            if (list === undefined) {
                 return []
             }
-            for (const m of list){
+            for (const m of list) {
                 let wsMessage = {} as any
                 const bufferSinComa = m.base64.split(',')[1]
                 const buffer = Buffer.from(bufferSinComa, 'base64');
-                const bufferJSon = JSON.stringify(buffer)
-                const bufferOtro = fs.readFileSync("C:\\Users\\usuario\\Downloads\\imagenes-de-usuario.png")
-                const otroBufferJson = JSON.stringify(bufferOtro)
                 console.log('este es el buffer', JSON.stringify(buffer))
                 message.buffer = m.base64.split(",")[1]
                 if (m.tipo.match(/video*/)) {
@@ -91,12 +89,71 @@ export default class WS {
                 }
                 message.whatsappId = wsMessage.key.id
                 const result = await saveNewMessageInConversation(conversationId, message)
-                returnedList.push({ ...result, user})
+                returnedList.push({ ...result, user })
             }
             return returnedList
         } else {
-            const wsMessage = await baileys?.sendMessage(contact.phoneNumber.split('+')[1], message)
-    
+            let wsMessage = null
+            if (data.fastMessage) {
+                const fastMedia = data.fastMessage
+                if (fastMedia.fastMediaMessages) {
+                    const fastMediaMessages = fastMedia.fastMediaMessages as FastMediaMessageType[]
+                    if (fastMediaMessages.length > 0) {
+                        for (const m of fastMediaMessages) {
+                            if (m.base64) {
+                                let wsMessage = {} as any
+                                const buffer = Buffer.from(m.base64, 'base64');
+                                console.log('este es el buffer', JSON.stringify(buffer))
+                                message.buffer = m.base64.split(",")[1]
+                                if (m.messageType.match(/video*/)) {
+                                    message.contentType = "videoMessage"
+                                    wsMessage = await baileys.sendMediaMessage(
+                                        contact.phoneNumber.split('+')[1],
+                                        {
+                                            video: buffer,
+                                            caption: m.text || '',
+                                        }
+                                    )
+                                } else if (m.messageType.match(/image*/)) {
+                                    message.contentType = "imageMessage"
+                                    wsMessage = await baileys.sendMediaMessage(
+                                        contact.phoneNumber.split('+')[1],
+                                        {
+                                            image: buffer,
+                                            caption: m.text || '',
+                                        }
+                                    )
+
+                                } else if (m.messageType.match(/audio*/)) {
+                                    message.contentType = "audioMessage"
+                                    wsMessage = await baileys.sendMediaMessage(
+                                        contact.phoneNumber.split('+')[1],
+                                        {
+                                            audio: buffer,
+                                        }
+                                    )
+                                } else if (m.messageType.match(/document*/)) {
+                                    message.contentType = "documentMessage"
+                                    wsMessage = contact.phoneNumber.split('+')[1],
+                                    {
+                                        document: buffer,
+                                    }
+                                }
+                                message.whatsappId = wsMessage.key.id
+                                const result = await saveNewMessageInConversation(conversationId, message)
+                            }
+                            else{
+
+                                wsMessage = await baileys?.sendMessage(contact.phoneNumber.split('+')[1], m.text as any)
+                            }
+                        }
+                    }
+                }
+
+
+            }
+            wsMessage = await baileys?.sendMessage(contact.phoneNumber.split('+')[1], message)
+
             message.whatsappId = wsMessage.key.id
             const result = await saveNewMessageInConversation(conversationId, message)
             return { ...result, user }
