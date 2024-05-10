@@ -74,9 +74,9 @@ export const fastMediaMessageSchema = z.object(
     {
         id:z.number().positive(),
         fastMessageId: z.number().positive(),
-        text:z.string(),
+        text:z.string().default(""),
         messageType:z.string(),
-        base64: z.string(),
+        base64: z.string().optional(),
         order:z.number(),
     }
 )
@@ -84,10 +84,10 @@ export const fastMessageSchema = z.object(
     {
         id: z.number().positive(),  
         title: z.string(),
-        text: z.string(),
         adminId: z.number().positive(),
         keyWords: z.string(),
         admin: userSchema.optional(),
+        fastMediaMessages: z.array(fastMediaMessageSchema).optional()
     }
 )
 export const conversationNoteSchema = z.object({

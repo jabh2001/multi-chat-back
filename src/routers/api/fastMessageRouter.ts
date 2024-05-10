@@ -20,7 +20,7 @@ const fastRouter = Router();
 
 interface Body{
     fastMessage:FastMessageType,
-    fastMedia: FastMediaMessageType[]
+    fastMediaMessage: FastMediaMessageType[]
 }
 
 fastRouter.ws('/send/:id_inbox', async(ws, rq)=>{
@@ -41,9 +41,10 @@ fastRouter.route("/")
     .post(async (req, res) => {
         const body :Body = req.body
         try {
-            const data = await saveNewFastMessage(body.fastMessage, {fastMedia:body.fastMedia});
+            const data = await saveNewFastMessage({...body.fastMessage, adminId:req.identity.id}, {fastMediaMessage:body.fastMediaMessage});
             res.json({ ...data });
         } catch (e) {
+            throw e
             return errorResponse(res, e)
         }
     })
@@ -53,7 +54,7 @@ fastRouter.route("/:id")
         try {
             const body: Body = req.body;
         
-            const fastMessages = await updateFastMessage(parseInt(req.params.id), body.fastMessage, {fastMediaMessage:body.fastMedia});
+            const fastMessages = await updateFastMessage(parseInt(req.params.id), body.fastMessage, {fastMediaMessage:body.fastMediaMessage});
             return res.json({ fastMessages });
         } catch (e) {
             return errorResponse(res, e)
