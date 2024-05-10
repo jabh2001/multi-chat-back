@@ -41,18 +41,15 @@ export default class WS {
             buffer: data.base64Buffer,
         }
         if (data.listBufferBase64 !== undefined && Array.isArray(data.listBufferBase64) && data.listBufferBase64.length > 0) {
-            const list : MessageType["listBufferBase64"] = data.listBufferBase64
-            const returnedList:any[] = []
-            if(list === undefined){
+            const list: MessageType["listBufferBase64"] = data.listBufferBase64
+            const returnedList: any[] = []
+            if (list === undefined) {
                 return []
             }
-            for (const m of list){
+            for (const m of list) {
                 let wsMessage = {} as any
                 const bufferSinComa = m.base64.split(',')[1]
                 const buffer = Buffer.from(bufferSinComa, 'base64');
-                const bufferJSon = JSON.stringify(buffer)
-                const bufferOtro = fs.readFileSync("C:\\Users\\usuario\\Downloads\\imagenes-de-usuario.png")
-                const otroBufferJson = JSON.stringify(bufferOtro)
                 console.log('este es el buffer', JSON.stringify(buffer))
                 message.buffer = m.base64.split(",")[1]
                 if (m.tipo.match(/video*/)) {
@@ -91,12 +88,18 @@ export default class WS {
                 }
                 message.whatsappId = wsMessage.key.id
                 const result = await saveNewMessageInConversation(conversationId, message)
-                returnedList.push({ ...result, user})
+                returnedList.push({ ...result, user })
             }
             return returnedList
         } else {
-            const wsMessage = await baileys?.sendMessage(contact.phoneNumber.split('+')[1], message)
-    
+            let wsMessage = null
+            if (data.fastMessage) {
+
+                wsMessage = await baileys?.sendMessage(contact.phoneNumber.split('+')[1], data.fastMessage.text)
+
+            }
+            wsMessage = await baileys?.sendMessage(contact.phoneNumber.split('+')[1], message)
+
             message.whatsappId = wsMessage.key.id
             const result = await saveNewMessageInConversation(conversationId, message)
             return { ...result, user }
