@@ -44,7 +44,6 @@ fastRouter.route("/")
             const data = await saveNewFastMessage({...body.fastMessage, adminId:req.identity.id}, {fastMediaMessage:body.fastMediaMessage});
             res.json({ ...data });
         } catch (e) {
-            throw e
             return errorResponse(res, e)
         }
     })
