@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { errorResponse } from "../../service/errorService";
 import { verifyUser } from "../../service/agentService";
-import { assignJWTTokenToCookies, createJWTToken, getJWTTokenValue, isAuthenticatedMiddleware } from "../../service/authService";
+import { assignJWTTokenToCookies, createJWTToken, getJWTTokenValue, isAuthenticatedMiddleware, removeJWTTokenCookie } from "../../service/authService";
 
 const authRouter = Router()
 
@@ -14,6 +14,13 @@ authRouter.post("/login", async (req, res)=>{
         //Create JWT token
         const token = createJWTToken(user.id)
         return assignJWTTokenToCookies(res, token).send({ user, token })
+    } catch (e){
+        return errorResponse(res, e)
+    }
+})
+authRouter.post("/logout", async (req, res)=>{
+    try{
+        return removeJWTTokenCookie(res).send({ msg:"session out", status:true })
     } catch (e){
         return errorResponse(res, e)
     }
