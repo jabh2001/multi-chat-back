@@ -1,20 +1,24 @@
-import makeWASocket, { AnyMediaMessageContent, DisconnectReason, MessageUpsertType, downloadMediaMessage, proto, useMultiFileAuthState } from "@whiskeysockets/baileys"
-import { Boom } from "@hapi/boom"
+import fs from "fs"
+import path from "path"
 import pino from "pino"
 import qrcode from "qrcode"
-import fs from "fs"
-import { ContactType, ConversationType, InboxType, Base64Buffer } from "../types"
-import { MessageType } from "./schemas"
-import { ContactModel, ConversationModel, InboxModel } from "./models"
-import path from "path"
+
+import makeWASocket, { AnyMediaMessageContent, DisconnectReason, MessageUpsertType, downloadMediaMessage, proto, useMultiFileAuthState } from "@whiskeysockets/baileys"
+import { Boom } from "@hapi/boom"
+
+import { ContactType, ConversationType, InboxType, Base64Buffer, AgentType } from "../types"
 import { getClientList, getWss } from "../app"
-import WS from "./websocket"
-import { getMessageByWhatsAppId } from "../service/messageService"
-import { Join } from "./orm/query"
+import { getMessageByWhatsAppId, saveNewMessageInConversation } from "../service/messageService"
 import { getOrCreateContactByPhoneNumber } from "../service/contactService"
 import { getOrCreateConversation } from "../service/conversationService"
 import { getInboxByName } from "../service/inboxService"
+
+import { MessageType } from "./schemas"
+import { ContactModel, ConversationModel, InboxModel } from "./models"
+import { Join } from "./orm/query"
 import { initDBClient } from "./dataBase"
+import WS from "./websocket"
+import { getFastMessageById } from "../service/fastMessageService"
 
 
 const sseClients = getClientList()
@@ -26,17 +30,18 @@ const MEDIA_MESSAGE =  {
     videoMessage:'videoMessage',
     documentMessage:'documentMessage'
 }
-const MEDIA_MESSAGE_SET = new Set(Object.values(MEDIA_MESSAGE))
-
-abstract class Socket {
+export abstract class Socket {
     folder: string
 
     get qr_folder() {
         return path.join(QR_FOLDER, this.qr)
     }
+    
     get qr() {
         return `qr-${this.folder}.png`
     }
+     abstract  sendMediaMessage(phone: string, message: AnyMediaMessageContent): void;
+    
     getQRBase64() {
         const base64 = fs.readFileSync(this.qr_folder, { encoding: 'base64' });
         return base64
@@ -71,7 +76,9 @@ abstract class Socket {
     constructor(folder: string) {
         this.folder = folder
     }
-    abstract sendMessage(phone: string, message: MessageType): void
+    abstract  sendMessage(phone: string, message: Omit<MessageType, "id">): Promise<any>
+
+    
 }
 export class WhatsAppBaileysSocket extends Socket {
     sock: any
@@ -246,6 +253,7 @@ export class WhatsAppBaileysSocket extends Socket {
             await this.sendMessageorContact({ m })
         }
     }
+    
     async sendMediaMessage(phone: string, message: AnyMediaMessageContent) {
         return await this.sock.sendMessage(`${phone}@s.whatsapp.net`, message);
     }
@@ -255,7 +263,6 @@ export class WhatsAppBaileysSocket extends Socket {
         };
         return await this.sock.sendMessage(`${phone}@s.whatsapp.net`, mensaje);
     }
-
 
 }
 class SocketPool {

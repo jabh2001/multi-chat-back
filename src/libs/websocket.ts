@@ -1,9 +1,8 @@
-import fs from 'fs'
 import { saveNewMessageInConversation } from "../service/messageService"
 import { AgentType, WSMessageUpsertType } from "../types"
-import { ContactType, FastMediaMessageType, MessageType } from "./schemas"
-import { WhatsAppBaileysSocket } from './socketConnectionPool'
-import { getFastMediaMessageById, getFastMessageById } from '../service/fastMessageService'
+import { ContactType, MessageType } from "./schemas"
+import { Socket } from './socketConnectionPool'
+import {  getFastMessageById } from '../service/fastMessageService'
 
 export default class WS {
 
@@ -26,7 +25,7 @@ export default class WS {
         const result = await saveNewMessageInConversation(data.conversation.id, message)
         return JSON.stringify(result)
     }
-    static async outgoingMessage(data: any, baileys: WhatsAppBaileysSocket) {
+    static async outgoingMessage(data: any, socket: Socket) {
         const contact: ContactType = data.contact
         const user: AgentType = data.user
 
@@ -55,7 +54,7 @@ export default class WS {
                 message.buffer = m.base64.split(",")[1]
                 if (m.tipo.match(/video*/)) {
                     message.contentType = "videoMessage"
-                    wsMessage = await baileys.sendMediaMessage(
+                    wsMessage = await socket.sendMediaMessage(
                         contact.phoneNumber.split('+')[1],
                         {
                             video: buffer,
@@ -65,7 +64,7 @@ export default class WS {
                 } else if (m.tipo.match(/image*/)) {
                     message.contentType = "imageMessage"
                     message.content = m.caption
-                    wsMessage = await baileys.sendMediaMessage(
+                    wsMessage = await socket.sendMediaMessage(
                         contact.phoneNumber.split('+')[1],
                         {
                             image: buffer,
@@ -75,7 +74,7 @@ export default class WS {
 
                 } else if (m.tipo.match(/audio*/)) {
                     message.contentType = "audioMessage"
-                    wsMessage = await baileys.sendMediaMessage(
+                    wsMessage = await socket.sendMediaMessage(
                         contact.phoneNumber.split('+')[1],
                         {
                             audio: buffer,
@@ -107,7 +106,7 @@ export default class WS {
                     message.buffer = m.base64.split(",")[1]
                     if (m.messageType.match(/video*/)) {
                         message.contentType = "videoMessage"
-                        wsMessage = await baileys.sendMediaMessage(
+                        wsMessage = await socket.sendMediaMessage(
                             contact.phoneNumber.split('+')[1],
                             {
                                 video: buffer,
@@ -117,7 +116,7 @@ export default class WS {
                     } else if (m.messageType.match(/image*/)) {
                         message.contentType = "imageMessage"
                         message.content = m.text
-                        wsMessage = await baileys.sendMediaMessage(
+                        wsMessage = await socket.sendMediaMessage(
                             contact.phoneNumber.split('+')[1],
                             {
                                 image: buffer,
@@ -127,7 +126,7 @@ export default class WS {
 
                     } else if (m.messageType.match(/audio*/)) {
                         message.contentType = "audioMessage"
-                        wsMessage = await baileys.sendMediaMessage(
+                        wsMessage = await socket.sendMediaMessage(
                             contact.phoneNumber.split('+')[1],
                             {
                                 audio: buffer,
@@ -146,7 +145,7 @@ export default class WS {
                 } else {
                     message.contentType = "text"
                     message.content = m.text
-                    wsMessage = await baileys?.sendMessage(contact.phoneNumber.split('+')[1], message)
+                    wsMessage = await socket?.sendMessage(contact.phoneNumber.split('+')[1], message)
 
                     message.whatsappId = wsMessage.key.id
                     const result = await saveNewMessageInConversation(conversationId, message)
@@ -157,7 +156,7 @@ export default class WS {
         } else {
             let wsMessage
 
-            wsMessage = await baileys?.sendMessage(contact.phoneNumber.split('+')[1], message)
+            wsMessage = await socket?.sendMessage(contact.phoneNumber.split('+')[1], message)
 
             message.whatsappId = wsMessage.key.id
             const result = await saveNewMessageInConversation(conversationId, message)
