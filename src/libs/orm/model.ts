@@ -68,6 +68,11 @@ export class BaseRepository<T=any> {
         const result = await client.query(query, [id]);
         return result.rows[0];
     }
+    async deleteAll() {
+        const query = `DELETE FROM ${this.tableName} WHERE 1 = 1;`;
+        const result = await client.query(query);
+        return result;
+    }
 }
 
 export class BaseModel {
@@ -166,6 +171,16 @@ export class Model extends BaseModel {
     buildSQL(){
         return `CREATE TABLE IF NOT EXISTS "${this.tableName}" (${ Object.values(this.c).map(c => c.getBuildSQL()).join(",") });`
     }
+    dropSQL(){
+        return `DROP TABLE IF EXISTS "${this.tableName}"`
+    }
+    teardownAllData(){
+        return `DELETE FROM "${this.tableName}" WHERE 1 = 1;`
+    }
+    async fetchTeardownAllData(){
+        return await client.query(this.teardownAllData())
+    }
+
     alias(alias:string){
         const aliasModal = new Model(this.tableName, Object.values(this.c).map(c => c.deepCopy(this)), false)
         aliasModal._alias = alias

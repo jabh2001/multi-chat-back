@@ -19,7 +19,7 @@ export const getTeamById:GetTeamByIdType = async (id) => {
     return await TeamModel.query.filter(TeamModel.c.id.equalTo(id)).fetchOneQuery<TeamType>()
 }
 export const updateTeam:UpdateTeamType = async (id, newTeam) => {
-    const newData = teamSchema.omit({ id:true }).parse(newTeam)
+    const newData = teamSchema.omit({ id:true }).partial().parse(newTeam)
     const team = await TeamModel.update.values(newData).filter(TeamModel.c.id.equalTo(id)).fetchOneQuery<TeamType>()
     sseClients.emitToClients("update-team", team)
     return team

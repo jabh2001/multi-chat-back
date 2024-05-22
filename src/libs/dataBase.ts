@@ -1,36 +1,70 @@
+import 'dotenv/config';
 import { Client } from 'pg';
 import { Model } from './orm';
-import { saveNewAgent } from '../service/agentService';
+import { saveNewAgent, verifyOrCreateAdminUser } from '../service/agentService';
 
 // Configuración de la conexión a la base de datos
+const {
+  NODE_ENV,
+  DB_USER,
+  DB_HOST,
+  DB_NAME,
+  DB_PASSWORD,
+  DB_PORT,
+  DB_TEST_USER,
+  DB_TEST_HOST,
+  DB_TEST_NAME,
+  DB_TEST_PASSWORD,
+  DB_TEST_PORT,
+} = process.env
+
 const dbConfig = {
-  user: process.env.DB_USER||'postgres',
-  host: process.env.DB_HOST||'localhost',
-  database: process.env.DB_NAME|| 'multi-chat',
-  password: process.env.DB_PASSWORD || 'pokemon70',
-  port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432,
+  user: DB_USER||'postgres',
+  host: DB_HOST||'localhost',
+  database: DB_NAME|| 'multi-chat',
+  password: DB_PASSWORD || 'pokemon70',
+  port: DB_PORT ? parseInt(DB_PORT, 10) : 5432,
 };
 
-if (!dbConfig.user || !dbConfig.host || !dbConfig.database) {
-  console.error(dbConfig);
-  console.error('Falta configuración de la base de datos en las variables de entorno.');
-  process.exit(1);
-}
+const dbConfigTest = {
+  user: DB_TEST_USER,
+  host: DB_TEST_HOST,
+  database: DB_TEST_NAME,
+  password: DB_TEST_PASSWORD,
+  port: DB_TEST_PORT ? parseInt(DB_TEST_PORT, 10) : 5432,
+};
 
-const client = new Client(dbConfig);
+
+const client = new Client(NODE_ENV=="test" ? dbConfigTest : dbConfig);
 export async function initDBClient(){
   try{
     await client.connect()
-    const query = Model.modelPool.map(m => m.buildSQL()).join(";")
-    await client.query(query);
-    const result = await client.query(`SELECT * FROM public."user" where email = 'admin@admin.com' limit 1;`);
-    if(!result.rowCount){
-      await saveNewAgent({ name:"admin", email:"admin@admin.com", role:"admin", password:process.env.USER_ADMIN_PASSWORD||'a super secret password'} as any);
-    }
-
+    await constructDb()
+    await verifyOrCreateAdminUser()
   } catch(e){
       console.error('Error al crear tablas:', e);
   }
+}
+export const turnOnDB = async () => {
+  try {
+      await client.query("select 1")
+  } catch (e){
+      await client.connect()
+  }
+}
+export const constructDb = async () => {
+  const query = Model.modelPool.map(m => m.buildSQL()).join(";")
+  return await client.query(query);
+} 
+
+export const destructDb =async () => {
+  const query = Model.modelPool.map(m => m.dropSQL()).join(";")
+  return await client.query(query);
+}
+
+export const teardownData = async () => {
+  const query = Model.modelPool.map(m => m.teardownAllData()).join(";")
+  return await client.query(query);
 }
 // initDBClient()
 

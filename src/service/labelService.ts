@@ -19,7 +19,7 @@ export const getLabelById:GetLabelByIdType = async (id) => {
     return await LabelModel.query.filter(LabelModel.c.id.equalTo(id)).fetchOneQuery<LabelType>()
 }
 export const updateLabel:UpdateLabelType = async (id, newLabel) => {
-    const newData = labelSchema.omit({ id:true }).parse(newLabel)
+    const newData = labelSchema.omit({ id:true }).partial().parse(newLabel)
     const label = await LabelModel.update.values(newData).filter(LabelModel.c.id.equalTo(id)).fetchOneQuery<LabelType>()
     sseClients.emitToClients("update-label", label)
     return label

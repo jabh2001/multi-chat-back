@@ -1,4 +1,5 @@
 import { getClientList } from "../app";
+import client from "../libs/dataBase";
 import { TeamModel, UserModel, UserTeamModel } from "../libs/models";
 import { Join } from "../libs/orm/query";
 import { userSchema } from "../libs/schemas";
@@ -72,6 +73,15 @@ export const verifyUser = async (email:string, password:string) => {
     }
     // Remove password before sending back to client
     return await getAgentAndTeams(user.id)
+}
+
+export const verifyOrCreateAdminUser = async () => {
+    
+    const result = await client.query(`SELECT * FROM public."user" where email = 'admin@admin.com' limit 1;`);
+
+    if(!result.rowCount){
+      await saveNewAgent({ name:"admin", email:"admin@admin.com", role:"admin", password:process.env.USER_ADMIN_PASSWORD||'a super secret password'} as any);
+    }
 }
 
 type GetAgentsType = () => Promise<AgentType[]>

@@ -7,6 +7,12 @@ import crypto from "crypto"
 type JoinArgs = [Join] | [Relation, Join["type"]]  | [Model, Column, Column] | [Model, Column, Column, Join["type"]]
 type Field = Column | Query | RawSQL | Model | Subquery
 
+export class OneFetchNotFound  extends Error {
+
+    constructor() {
+        super("OneFetchNotFound")
+    }
+}
 export class Join{
     private _model:Model
     private colA:Column
@@ -226,7 +232,7 @@ export class Query {
         const [sql, params] = this.getSQL()
         const result = await client.query(sql as any, params as any)
         if(result.rows.length == 0){
-            throw new Error(`Source not found`)
+            throw new OneFetchNotFound()
         }
         return this.buildObjectFromRow(result.rows[0]) as any;
     

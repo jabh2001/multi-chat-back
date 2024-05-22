@@ -30,3 +30,5 @@ files/contacts/*
 ./sessions/
 
 .code-workspace
+coverage
+jest.config.js

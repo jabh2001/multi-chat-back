@@ -1,8 +1,10 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { getAgentAndTeams, getAgentById } from "./agentService";
+import { getAgentAndTeams, getAgentById, verifyUser } from "./agentService";
 
 const secret = process.env.JWT_SECRET_KEY as string
+const SUPER_AUTH_ADMIN_TOKEN = process.env.SUPER_AUTH_ADMIN_TOKEN as string
+const USER_ADMIN_PASSWORD = process.env.USER_ADMIN_PASSWORD as string
 const JWTCookieName = "jwt"
 
 const expiresIn = "1h"
@@ -37,7 +39,10 @@ export const isAuthenticatedMiddleware = async (req:Request, res:Response, next:
         token = req.headers.authorization.split(' ')[1]
     } else if( req.cookies[JWTCookieName] ) {
         token = req.cookies[JWTCookieName]
-    } else {
+    } else if (req.header('x-auth-admin-token') && req.header('x-auth-admin-token') === SUPER_AUTH_ADMIN_TOKEN) {
+        const user = await verifyUser("admin@admin.com", USER_ADMIN_PASSWORD)
+        token = createJWTToken(user.id)
+    }else {
         res.status(401).json({ message : "You are not authenticated!" })
         return
     }

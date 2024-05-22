@@ -49,7 +49,7 @@ export const getOrCreateContactByPhoneNumber = async (phoneNumber:string, contac
 }
 
 export const updateContact:UpdateContactType = async (contact, newContact:any) => {
-    const newData = contactSchema.omit({ id:true, avatarUrl:true }).partial().parse(newContact)
+    const newData = contactSchema.omit({ id:true, avatarUrl:true }).partial().partial().parse(newContact)
     if(Object.keys(newData).length == 0){
         return await getContactById(contact.id)
     }

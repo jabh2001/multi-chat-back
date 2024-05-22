@@ -29,7 +29,7 @@ export async  function getInboxByName(inboxName:string){
     return await InboxModel.query.filter(InboxModel.c.name.equalTo(inboxName)).fetchOneQuery() as InboxType
 }
 export async function updateInbox(inbox:InboxType, newData:Partial<InboxType>){
-    const newDataA = inboxSchema.omit({ id:true }).parse(newData)
+    const newDataA = inboxSchema.omit({ id:true }).partial().parse(newData)
     return await InboxModel.update.values(newDataA).filter(InboxModel.c.id.equalTo(inbox.id)).fetchOneQuery() as InboxType
 }
 export async function deleteInbox(inboxId:InboxType["id"]){

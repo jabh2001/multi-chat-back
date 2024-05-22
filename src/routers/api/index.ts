@@ -3,7 +3,6 @@ import teamRouter from "./teamRouter"
 import labelRouter from "./labelRouter"
 import agentRouter from "./agentRouter"
 import contactRouter from "./contactRouter"
-import testRouter from "./test"
 import { AgentType, ContactType, ConversationType, InboxType } from "../../types"
 import inboxRouter from "./inboxRouter"
 import authRouter from "./authRouter"
@@ -27,7 +26,6 @@ authenticatedRoute.use("/agents", agentRouter)
 
 authenticatedRoute.use("/contact", contactRouter)
 authenticatedRoute.use("/contacts", contactRouter)
-authenticatedRoute.use("/test", testRouter)
 
 authenticatedRoute.use("/inbox", inboxRouter)
 authenticatedRoute.use("/inboxes", inboxRouter)

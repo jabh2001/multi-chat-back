@@ -27,4 +27,8 @@ app.get("/", async (req, res)=>{
 
 
 const port = 3000
-app.listen(port, ()=> console.log(`This express server is now running on port: ${port}`))
+const server = app.listen(port, ()=> console.log(`This express server is now running on port: ${port}`))
+export {
+    server,
+    app
+}
